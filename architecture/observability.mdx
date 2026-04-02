@@ -6,32 +6,35 @@ description: "Full OpenTelemetry pipeline with distributed tracing, metrics, and
 
 ## Architecture
 
-<Frame>
-```mermaid
-graph LR
-    subgraph "Data Sources"
-        SDK[Python SDK<br/>hexr_llm / hexr_tool]
-        ENVOY[Envoy Proxies<br/>mTLS metrics]
-        A2A[A2A Sidecars<br/>task lifecycle]
-        SERVICES[Platform Services<br/>Vault / Gateway / CI]
-    end
-    subgraph "Collection"
-        OTEL[OTel Collector<br/>:4317 gRPC / :4318 HTTP]
-    end
-    subgraph "Storage & Visualization"
-        JAEGER[Jaeger<br/>Traces :16686]
-        PROM[Prometheus<br/>Metrics]
-        GRAF[Grafana<br/>Dashboards]
-    end
-    SDK -->|OTLP gRPC| OTEL
-    ENVOY -->|OTLP| OTEL
-    A2A -->|OTLP| OTEL
-    SERVICES -->|OTLP| OTEL
-    OTEL -->|traces| JAEGER
-    OTEL -->|metrics| PROM
-    PROM --> GRAF
-```
-</Frame>
+All telemetry flows through the OpenTelemetry Collector, then routes to dedicated backends:
+
+<Tabs>
+  <Tab title="Data Sources">
+    | Source | What It Emits | Protocol |
+    |--------|---------------|----------|
+    | **Python SDK** (`hexr_llm`, `hexr_tool`, `@hexr_agent`) | Agent spans, LLM metrics, tool invocations | OTLP gRPC → `:4317` |
+    | **Envoy Proxies** | mTLS metrics, connection counts, TLS handshake latency | OTLP |
+    | **A2A Sidecars** | Task lifecycle, message throughput, SSE connections | OTLP |
+    | **Platform Services** (Vault, Gateway, CI) | Operation rates, latency, error counts | OTLP |
+  </Tab>
+  <Tab title="Collection & Storage">
+    | Component | Role | Port |
+    |-----------|------|------|
+    | **OTel Collector** | Aggregation point for all telemetry | `:4317` gRPC, `:4318` HTTP |
+    | **Jaeger** | Distributed trace storage and UI | `:16686` |
+    | **Prometheus** | Metrics storage, 11+ scrape targets | `:9090` |
+    | **Grafana** | Dashboards — 42 panels across 2 dashboards | `:3000` |
+  </Tab>
+  <Tab title="Data Flow">
+    ```
+    Python SDK  ──┐
+    Envoy Proxies ──┤──► OTel Collector (:4317) ──┬──► Jaeger (traces)
+    A2A Sidecars  ──┤                              └──► Prometheus (metrics)
+    Platform Svcs ──┘                                       │
+                                                        Grafana (dashboards)
+    ```
+  </Tab>
+</Tabs>
 
 ---
 

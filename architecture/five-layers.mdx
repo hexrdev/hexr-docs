@@ -8,24 +8,33 @@ description: "Hexr organizes its runtime into five distinct layers — each inde
 
 Hexr's five layers form a dependency chain where each layer builds on the one below:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  LAYER 5: MANAGEMENT                                     │
-│  Dashboard · Cloud API · Identity Graph · Compliance     │
-├─────────────────────────────────────────────────────────┤
-│  LAYER 4: DEVELOPER EXPERIENCE                           │
-│  Python SDK · CLI · Private PyPI · Agent Decorators      │
-├─────────────────────────────────────────────────────────┤
-│  LAYER 3: PLATFORM SERVICES                              │
-│  Vault · Gateway · Credential Injector · A2A · Sandbox   │
-├─────────────────────────────────────────────────────────┤
-│  LAYER 2: OBSERVABILITY                                  │
-│  OTel Collector · Prometheus · Jaeger · Grafana          │
-├─────────────────────────────────────────────────────────┤
-│  LAYER 1: IDENTITY FOUNDATION                            │
-│  SPIRE Server · SPIRE Agent · Auto-Registrar · OIDC     │
-└─────────────────────────────────────────────────────────┘
-```
+<Steps>
+  <Step title="Layer 1 — Identity Foundation" icon="fingerprint">
+    **SPIRE Server · SPIRE Agent · Auto-Registrar · OIDC Discovery**
+    
+    The trust root. Every process gets a cryptographic identity (SPIFFE X.509 + JWT).
+  </Step>
+  <Step title="Layer 2 — Observability" icon="chart-mixed">
+    **OTel Collector · Prometheus · Jaeger · Grafana (42 panels)**
+    
+    Full telemetry pipeline — traces, metrics, and dashboards for every agent operation.
+  </Step>
+  <Step title="Layer 3 — Platform Services" icon="cubes">
+    **Vault · Gateway · Credential Injector · A2A · Sandbox · LLM Guard · Envoy · Valkey**
+    
+    The runtime services agents interact with transparently through the SDK.
+  </Step>
+  <Step title="Layer 4 — Developer Experience" icon="code">
+    **Python SDK · CLI · Private PyPI · Agent Decorators**
+    
+    What you interact with as a developer — `@hexr_agent`, `hexr build`, `hexr deploy`.
+  </Step>
+  <Step title="Layer 5 — Management" icon="gauge-high">
+    **Dashboard · Cloud API · Identity Graph · Compliance Engine**
+    
+    Web UI and APIs for platform operators and administrators.
+  </Step>
+</Steps>
 
 <Info>
   Each layer is deployed as independent Kubernetes workloads within the `hexr-system` namespace.
@@ -77,17 +86,15 @@ Every operation across the platform emits OpenTelemetry data.
 
 ### Telemetry Pipeline
 
-<Frame>
-```mermaid
-graph LR
-    SDK[Python SDK] -->|OTLP gRPC| OTEL[OTel Collector :4317]
-    ENVOY[Envoy Proxies] -->|OTLP| OTEL
-    A2A[A2A Sidecars] -->|OTLP| OTEL
-    OTEL -->|traces| JAEGER[Jaeger :16686]
-    OTEL -->|metrics| PROM[Prometheus]
-    PROM --> GRAF[Grafana]
-```
-</Frame>
+All telemetry flows through a single collection point:
+
+| Source | Protocol | What it emits |
+|--------|----------|---------------|
+| **Python SDK** (`@hexr_agent`, `hexr_tool`, `hexr_llm`) | OTLP gRPC → `:4317` | Agent invocations, tool calls, LLM spans |
+| **Envoy Proxies** | OTLP → OTel Collector | mTLS metrics, connection counts, latency |
+| **A2A Sidecars** | OTLP → OTel Collector | Task lifecycle, message throughput |
+
+The OTel Collector routes **traces** to Jaeger (`:16686`) and **metrics** to Prometheus, which feeds Grafana dashboards (42 panels across 2 dashboards).
 
 ### What Gets Instrumented
 
@@ -108,28 +115,15 @@ The runtime services agents interact with — usually transparently through the 
 
 ### Service Mesh
 
-<Frame>
-```mermaid
-graph TB
-    subgraph "Agent Pod"
-        AGENT[Agent Container]
-        ENVOY[Envoy Sidecar]
-    end
-    subgraph "hexr-system"
-        VAULT[Hexr Vault :8091]
-        GW[Hexr Gateway :8090]
-        CI[Credential Injector :8080]
-        SB[Sandbox :8092]
-    end
-    AGENT -->|localhost| ENVOY
-    ENVOY -->|mTLS| VAULT
-    ENVOY -->|mTLS| GW
-    ENVOY -->|mTLS| CI
-    ENVOY -->|mTLS| SB
-```
-</Frame>
-
 All inter-service communication uses mutual TLS via Envoy proxies loaded with X.509-SVIDs from SPIRE. There are **no API keys** between services.
+
+| Your Agent Pod | | hexr-system Services |
+|:-:|:-:|:-:|
+| Agent Container | `→ localhost →` Envoy Sidecar | |
+| | `──── mTLS ────►` | **Hexr Vault** `:8091` |
+| | `──── mTLS ────►` | **Hexr Gateway** `:8090` |
+| | `──── mTLS ────►` | **Credential Injector** `:8080` |
+| | `──── mTLS ────►` | **Sandbox** `:8092` |
 
 ---
 

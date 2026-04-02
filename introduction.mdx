@@ -4,40 +4,65 @@ sidebarTitle: "Introduction"
 description: "The identity-first runtime platform for AI agents. Deploy secure, observable, multi-cloud agents with cryptographic identity — from a single Python decorator."
 ---
 
-```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#6366F1', 'primaryTextColor': '#E0E7FF', 'primaryBorderColor': '#818CF8', 'lineColor': '#A5B4FC', 'secondaryColor': '#1E1B4B', 'tertiaryColor': '#312E81', 'fontSize': '14px'}}}%%
-flowchart LR
-    CODE["<b>Your Code</b>\n@hexr_agent\n+ any framework"]
-    
-    BUILD["<b>hexr build</b>\nAST discovery\nDockerfile gen\nsidecar injection"]
-    
-    DEPLOY["<b>hexr deploy</b>\nK8s scheduling\nauto-registration"]
+## From decorator to production in three commands
 
-    subgraph RUNTIME["What Hexr gives you — automatically"]
-        direction TB
-        ID["🔐 Cryptographic Identity\nSPIFFE X.509 per process"]
-        CREDS["🔑 Cloud Credentials\nAWS · GCP · Azure\nzero secrets in code"]
-        MESH["🔒 mTLS Mesh\nEnvoy sidecar\nzero-trust networking"]
-        OBS["📊 Full Observability\ntraces · metrics · costs\nper agent, per LLM call"]
-        TOOLS["🔧 Secure Tool Access\nVault · Gateway · Sandbox\nOPA policy enforcement"]
-        COMM["📡 Agent-to-Agent\nA2A protocol\ntask lifecycle · streaming"]
-    end
+<Steps>
+  <Step title="Write your agent" icon="code">
+    Use any Python framework — CrewAI, LangChain, OpenAI, or raw Python. Add one decorator.
+    ```python
+    from hexr import hexr_agent, hexr_tool, hexr_llm
 
-    CODE -->|"one decorator"| BUILD
-    BUILD -->|"one command"| DEPLOY
-    DEPLOY --> RUNTIME
+    @hexr_agent(name="research-analyst", tenant="acme-corp")
+    def analyze(topic: str):
+        s3 = hexr_tool("aws_s3")            # authenticated — no keys in code
+        client = hexr_llm(openai.OpenAI())   # auto-traced with cost attribution
+        return client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": f"Analyze {topic}"}]
+        ).choices[0].message.content
+    ```
+  </Step>
+  <Step title="Build + Push" icon="hammer">
+    The CLI scans your source code via AST, discovers every `@hexr_agent`, `hexr_tool()`, and `hexr_llm()` call, then generates a Dockerfile, Kubernetes manifests, and injects four sidecar containers automatically.
+    ```bash
+    hexr build   # AST discovery → Dockerfile + manifests + sidecar injection
+    hexr push    # Container image → registry
+    ```
+  </Step>
+  <Step title="Deploy" icon="rocket">
+    One command schedules your agent as a Kubernetes Pod. The Auto-Registrar creates a SPIFFE identity. The Credential Injector provisions cloud access. Envoy starts mTLS. Observability flows.
+    ```bash
+    hexr deploy  # Kubernetes scheduling → SPIFFE registration → ready
+    ```
+  </Step>
+</Steps>
 
-    style CODE fill:#4F46E5,stroke:#818CF8,stroke-width:2px,color:#E0E7FF
-    style BUILD fill:#6366F1,stroke:#A5B4FC,stroke-width:2px,color:#E0E7FF
-    style DEPLOY fill:#7C3AED,stroke:#C4B5FD,stroke-width:2px,color:#E0E7FF
-    style RUNTIME fill:#1E1B4B,stroke:#6366F1,stroke-width:2px,color:#E0E7FF
-    style ID fill:#312E81,stroke:#818CF8,color:#E0E7FF
-    style CREDS fill:#312E81,stroke:#818CF8,color:#E0E7FF
-    style MESH fill:#312E81,stroke:#818CF8,color:#E0E7FF
-    style OBS fill:#312E81,stroke:#818CF8,color:#E0E7FF
-    style TOOLS fill:#312E81,stroke:#818CF8,color:#E0E7FF
-    style COMM fill:#312E81,stroke:#818CF8,color:#E0E7FF
-```
+## What Hexr gives you — automatically
+
+Every deployed agent gets all of this with zero configuration:
+
+<CardGroup cols={2}>
+  <Card title="🔐 Cryptographic Identity" icon="fingerprint">
+    Every agent **process** gets a unique SPIFFE X.509 certificate — not just the container. Mutual TLS everywhere. Certificates rotate automatically.
+  </Card>
+  <Card title="🔑 Zero-Secret Cloud Access" icon="key">
+    `hexr_tool("aws_s3")` returns an authenticated boto3 client. JWT-SVID → AWS STS / GCP WIF / Azure exchange. Three-tier cache delivers sub-ms latency.
+  </Card>
+  <Card title="📊 Full Observability" icon="chart-mixed">
+    `hexr_llm()` wraps any LLM client with OpenTelemetry spans. Per-agent cost attribution, token counts, latency histograms — all correlated by SPIFFE identity.
+  </Card>
+  <Card title="🔒 Zero-Trust Networking" icon="shield-halved">
+    Envoy sidecar handles all traffic. Every connection is mTLS. OPA policy enforcement at every service boundary. No plaintext, ever.
+  </Card>
+  <Card title="📡 Agent-to-Agent Protocol" icon="messages">
+    Built-in A2A sidecar with JSON-RPC 2.0. Agent discovery via Agent Cards, task lifecycle, SSE streaming — all authenticated via SPIFFE.
+  </Card>
+  <Card title="🔧 Secure Tool Access" icon="wrench">
+    Import any OpenAPI spec as MCP tools. Gateway handles credential injection from Vault automatically. Sandbox runs code in Firecracker microVMs.
+  </Card>
+</CardGroup>
+
+---
 
 ## Choose Your Deployment Model
 
@@ -73,76 +98,6 @@ Hexr runs the same agent runtime everywhere — the only difference is who manag
 
 ---
 
-## What is Hexr?
-
-Hexr is a **runtime platform** that gives every AI agent a cryptographic identity, secure access to cloud tools, and full observability — without changing your agent code.
-
-```python
-from hexr import hexr_agent, hexr_tool, hexr_llm
-import openai
-
-@hexr_agent(name="research-analyst", tenant="acme-corp")
-def analyze(topic: str):
-    # Authenticated S3 client — no API keys in code
-    s3 = hexr_tool("aws_s3")
-    
-    # LLM calls auto-traced with cost attribution
-    client = hexr_llm(openai.OpenAI())
-    
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": f"Analyze {topic}"}]
-    )
-    return response.choices[0].message.content
-```
-
-One decorator. Zero credential management. Full telemetry.
-
----
-
-## Platform at a Glance
-
-<CardGroup cols={3}>
-  <Card title="Identity" icon="fingerprint">
-    Every agent process gets a unique SPIFFE identity — not just the container, the **process**.
-    Mutual TLS everywhere. Zero-trust by default.
-  </Card>
-  <Card title="Credentials" icon="key">
-    `hexr_tool("aws_s3")` returns an authenticated boto3 client. 
-    Three-tier cache: in-memory → Valkey → STS exchange. Sub-millisecond.
-  </Card>
-  <Card title="Observability" icon="chart-mixed">
-    `hexr_llm()` wraps any LLM client with OpenTelemetry spans. 
-    Per-agent cost attribution, token tracking, latency histograms.
-  </Card>
-  <Card title="Communication" icon="messages">
-    Built-in A2A protocol with JSON-RPC 2.0 sidecar. 
-    Agent discovery, task lifecycle, SSE streaming — all over mTLS.
-  </Card>
-  <Card title="Secrets" icon="vault">
-    SPIFFE-native vault. No API keys — your identity IS the key. 
-    AES-256-GCM encryption. OPA policy enforcement at every boundary.
-  </Card>
-  <Card title="Tools" icon="wrench">
-    Import any OpenAPI spec → MCP tools. Call them with SPIFFE authentication. 
-    Gateway handles credential injection from Vault automatically.
-  </Card>
-  <Card title="Sandbox" icon="box">
-    `hexr.sandbox.exec()` runs code in Firecracker microVMs. 
-    Hardware isolation. No SPIFFE access from inside the sandbox.
-  </Card>
-  <Card title="Browser" icon="globe">
-    `hexr.browser.browse()` launches headless Chromium in a microVM. 
-    Playwright-powered. Screenshot, extract, click — all isolated.
-  </Card>
-  <Card title="Guard" icon="shield-halved">
-    LLM Guard scans every prompt and response. 
-    Prompt injection detection, secret scanning, invisible text detection.
-  </Card>
-</CardGroup>
-
----
-
 ## Framework Agnostic
 
 Write agents with any Python framework. Hexr detects and adapts automatically.
@@ -167,31 +122,6 @@ Write agents with any Python framework. Hexr detects and adapts automatically.
     No framework needed. Just `@hexr_agent` and go.
   </Card>
 </CardGroup>
-
----
-
-## From Code to Production in Three Commands
-
-<Steps>
-  <Step title="Build">
-    ```bash
-    hexr build my_agent.py --tenant acme-corp
-    ```
-    AST analysis discovers your agents, infers framework, generates Dockerfile + Kubernetes manifests + SPIFFE process contexts. All in `.hexr/`.
-  </Step>
-  <Step title="Push">
-    ```bash
-    hexr push
-    ```
-    Multi-platform container build (amd64/arm64), vulnerability scan, push to your registry or Hexr Cloud.
-  </Step>
-  <Step title="Deploy">
-    ```bash
-    hexr deploy
-    ```
-    Applies manifests. Agent pod starts with 4 containers: your agent, Envoy mTLS proxy, A2A sidecar, and PID mapper. Ready in seconds.
-  </Step>
-</Steps>
 
 ---
 

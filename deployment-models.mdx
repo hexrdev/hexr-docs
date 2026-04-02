@@ -19,34 +19,37 @@ description: "Hexr supports four deployment models — from fully managed SaaS t
 
 ## Hexr Cloud (Managed SaaS)
 
-<Frame>
-```mermaid
-graph LR
-    subgraph "Your Machine"
-        CLI[hexr CLI]
-    end
-    subgraph "Hexr Cloud (GKE)"
-        API[Cloud API]
-        RT[Agent Runtime]
-        ID[SPIRE Identity]
-        OBS[Observability]
-        DB[(Cloud SQL)]
-    end
-    CLI -->|"hexr push/deploy"| API
-    API --> RT
-    RT --> ID
-    RT --> OBS
-    API --> DB
-```
-</Frame>
-
 Everything managed by Hexr. You write agents, we handle the rest.
 
-- **Sign up** at [hexr.dev](https://hexr.dev) → get an API key
-- **`hexr login`** → authenticate your CLI
-- **`hexr build && hexr push --cloud && hexr deploy --cloud`** → agent running
-- **Dashboard** at [app.hexr.cloud](https://app.hexr.cloud) → monitor everything
-- **Pay** with Hexr Compute Units (HCU) — metered per operation
+<Steps>
+  <Step title="Sign up" icon="user-plus">
+    Create an account at [hexr.dev](https://hexr.dev) and get an API key.
+  </Step>
+  <Step title="Authenticate" icon="key">
+    ```bash
+    hexr login
+    ```
+  </Step>
+  <Step title="Build, push, deploy" icon="rocket">
+    ```bash
+    hexr build && hexr push --cloud && hexr deploy --cloud
+    ```
+  </Step>
+  <Step title="Monitor" icon="chart-line">
+    Dashboard at [app.hexr.cloud](https://app.hexr.cloud) — agents, traces, identity graph, compliance.
+  </Step>
+</Steps>
+
+**What Hexr Cloud manages for you:**
+
+<CardGroup cols={3}>
+  <Card title="Cloud API" icon="server">REST API for tenant management, HCU metering, API keys.</Card>
+  <Card title="Agent Runtime" icon="robot">GKE Autopilot — auto-scaling, auto-healing, zero ops.</Card>
+  <Card title="SPIRE Identity" icon="fingerprint">Hexr root CA. Per-process SVIDs issued automatically.</Card>
+  <Card title="Observability" icon="chart-mixed">OTel → Prometheus → Grafana → Jaeger. Pre-configured.</Card>
+  <Card title="Cloud SQL" icon="database">PostgreSQL for SPIRE entries, metering, and Vault data.</Card>
+  <Card title="HCU Billing" icon="credit-card">Pay-as-you-go with Hexr Compute Units. Metered per operation.</Card>
+</CardGroup>
 
 <Card title="Get Started with Hexr Cloud" icon="cloud" href="/cloud/quickstart" />
 
@@ -54,37 +57,39 @@ Everything managed by Hexr. You write agents, we handle the rest.
 
 ## Self-Hosted (On-Premises / Private Cloud)
 
-<Frame>
-```mermaid
-graph LR
-    subgraph "Your Infrastructure"
-        TF[Terraform]
-        K8S[Kubernetes Cluster]
-        subgraph "hexr-system namespace"
-            SPIRE[SPIRE Server]
-            VAULT[Hexr Vault]
-            GW[Hexr Gateway]
-            CI[Credential Injector]
-            OTEL[OTel Stack]
-        end
-        subgraph "tenant namespaces"
-            A1[Agent Pods]
-            A2[Agent Pods]
-        end
-    end
-    TF -->|"terraform apply"| K8S
-    K8S --> SPIRE
-    A1 --> SPIRE
-    A2 --> VAULT
-```
-</Frame>
-
 Your infrastructure, your data, your control. Hexr ships as Terraform modules + Helm charts.
 
-- **Terraform** provisions cloud resources (VPC, K8s cluster, databases, DNS)
-- **Helm** deploys the Hexr runtime (SPIRE, Vault, Gateway, Observability)
-- **Works on** AWS EKS, GCP GKE, Azure AKS, bare-metal K8s, DigitalOcean
-- **Air-gapped** mode: zero outbound connectivity, all images pre-loaded
+<Steps>
+  <Step title="Provision infrastructure" icon="cloud">
+    ```bash
+    terraform init && terraform apply  # VPC, K8s cluster, databases, DNS
+    ```
+    Works on **AWS EKS, GCP GKE, Azure AKS, bare-metal K8s, DigitalOcean**.
+  </Step>
+  <Step title="Deploy Hexr runtime" icon="cube">
+    ```bash
+    helm install hexr-runtime hexr/hexr-runtime -n hexr-system -f values.yaml
+    ```
+    Deploys SPIRE, Vault, Gateway, Credential Injector, and full observability stack.
+  </Step>
+  <Step title="Deploy agents" icon="robot">
+    ```bash
+    hexr build && hexr push && hexr deploy
+    ```
+    Same CLI, same workflow — agents run in your cluster.
+  </Step>
+</Steps>
+
+**What deploys into your `hexr-system` namespace:**
+
+<CardGroup cols={3}>
+  <Card title="SPIRE Server" icon="fingerprint">Your own certificate authority. Customer-owned trust domain.</Card>
+  <Card title="Hexr Vault" icon="lock">SPIFFE-native secrets. AES-256-GCM. Data never leaves your network.</Card>
+  <Card title="Hexr Gateway" icon="door-open">OpenAPI → MCP tool adapter. Credential injection from Vault.</Card>
+  <Card title="Credential Injector" icon="key">JWT-SVID → STS exchange for AWS, GCP, Azure.</Card>
+  <Card title="OTel Stack" icon="chart-mixed">Collector, Prometheus, Jaeger, Grafana — all self-hosted.</Card>
+  <Card title="Air-Gapped" icon="shield-halved">Zero outbound connectivity mode. All images pre-loaded.</Card>
+</CardGroup>
 
 <Card title="Self-Hosted Quickstart" icon="server" href="/self-hosted/quickstart" />
 
@@ -92,31 +97,26 @@ Your infrastructure, your data, your control. Hexr ships as Terraform modules + 
 
 ## Hybrid Cloud (Coming Soon)
 
-<Frame>
-```mermaid
-graph TB
-    subgraph "Hexr Control Plane"
-        HCP[Hexr Cloud API]
-        HCA[Root CA]
-        HD[Dashboard]
-    end
-    subgraph "Customer Data Plane"
-        K8S[Customer K8s]
-        SPIRE[Nested SPIRE]
-        AGENTS[Agent Pods]
-    end
-    HCA <-->|"SPIFFE Federation"| SPIRE
-    HD <-->|"Metrics/Config"| K8S
-    AGENTS --> SPIRE
-```
-</Frame>
-
 Your agents run in your infrastructure. Hexr manages identity, observability, and tooling from the cloud. SPIFFE federation bridges trust domains without exposing credentials.
 
-- **Nested SPIRE**: Your SPIRE server federates with Hexr's root CA
-- **Data stays local**: Agent compute never leaves your network
-- **Control plane**: Dashboard, compliance, and config managed by Hexr
-- **Available**: Post-funding, additive to self-hosted (not a redesign)
+<CardGroup cols={2}>
+  <Card title="Hexr Control Plane (Cloud)" icon="cloud">
+    - **Cloud API** — tenant management, config, compliance
+    - **Root CA** — Hexr-operated SPIRE Server
+    - **Dashboard** — monitoring, identity graph, audit
+  </Card>
+  <Card title="Your Data Plane (On-Prem)" icon="building">
+    - **Customer K8s** — your cluster, your network
+    - **Nested SPIRE** — federates with Hexr's root CA
+    - **Agent Pods** — compute never leaves your network
+  </Card>
+</CardGroup>
+
+<Note>
+  **SPIFFE Federation** bridges the two trust domains. Your SPIRE server and Hexr's root CA 
+  exchange trust bundles — agents in your cluster get Hexr-federated identities without 
+  exposing credentials or data. This is an **additive** configuration change, not a redesign.
+</Note>
 
 ---
 

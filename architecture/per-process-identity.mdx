@@ -15,25 +15,31 @@ This matters because:
 - **Audit trails** need to know which specific agent made which API call
 - **Cost attribution** needs per-agent LLM token tracking
 
-<Frame>
-```mermaid
-graph TD
-    subgraph "Standard K8s Identity (Container-level)"
-        POD1[Pod: content-crew]
-        POD1 --> ID1["spiffe://…/pod/content-crew"]
-        ID1 -.-> Q1["Who called GPT-4? 🤷"]
-    end
-    subgraph "Hexr Identity (Process-level)"
-        POD2[Pod: content-crew]
-        POD2 --> A["spiffe://…/agent/researcher"]
-        POD2 --> B["spiffe://…/agent/writer"]
-        POD2 --> C["spiffe://…/agent/editor"]
-        A --> Q2A["Researcher: 1,200 tokens"]
-        B --> Q2B["Writer: 3,400 tokens"]
-        C --> Q2C["Editor: 800 tokens"]
-    end
-```
-</Frame>
+<CardGroup cols={2}>
+  <Card title="Standard K8s Identity" icon="container-storage">
+    **One identity per pod/container.**
+
+    ```
+    Pod: content-crew
+    └── spiffe://…/pod/content-crew
+        └── Who called GPT-4? 🤷
+    ```
+
+    No visibility into which sub-agent made which call. Cost attribution impossible.
+  </Card>
+  <Card title="Hexr Identity (Per-Process)" icon="fingerprint">
+    **One identity per agent process.**
+
+    ```
+    Pod: content-crew
+    ├── spiffe://…/researcher  → 1,200 tokens
+    ├── spiffe://…/writer      → 3,400 tokens
+    └── spiffe://…/editor      →   800 tokens
+    ```
+
+    Per-role access control, cost tracking, and audit logs.
+  </Card>
+</CardGroup>
 
 ---
 
@@ -104,23 +110,24 @@ Each process context file contains the template for SPIRE registration:
 
 When the pod starts, the Auto-Registrar creates SPIRE entries:
 
-<Frame>
-```mermaid
-sequenceDiagram
-    participant K8s as Kubernetes API
-    participant AR as Auto-Registrar
-    participant SPIRE as SPIRE Server
-
-    K8s->>AR: Pod created event (hexr.io/managed=true)
-    AR->>AR: Read process context ConfigMaps
-    loop For each process role
-        AR->>SPIRE: CreateEntry
-        Note over SPIRE: SPIFFE ID: spiffe://hexr.cloud/agent/acme-corp/content-crew/{role}
-        Note over SPIRE: Selectors: k8s:pod-uid:{uid}, hexr:process-role:{role}
-    end
-    AR-->>K8s: Entries created
-```
-</Frame>
+<Steps>
+  <Step title="Kubernetes fires pod event" icon="bell">
+    Kubernetes API notifies the Auto-Registrar that a pod with `hexr.io/managed=true` was created.
+  </Step>
+  <Step title="Auto-Registrar reads contexts" icon="file-lines">
+    Reads process context ConfigMaps mounted in the pod. Each file describes one agent role 
+    (researcher, writer, editor, etc.).
+  </Step>
+  <Step title="SPIRE entries created" icon="id-card">
+    For **each process role**, the Auto-Registrar calls `SPIRE.CreateEntry`:
+    
+    | Role | SPIFFE ID | Selectors |
+    |------|-----------|-----------|
+    | researcher | `spiffe://hexr.cloud/agent/acme-corp/content-crew/researcher` | `k8s:pod-uid:{uid}`, `hexr:process-role:researcher` |
+    | writer | `spiffe://hexr.cloud/agent/acme-corp/content-crew/writer` | `k8s:pod-uid:{uid}`, `hexr:process-role:writer` |
+    | editor | `spiffe://hexr.cloud/agent/acme-corp/content-crew/editor` | `k8s:pod-uid:{uid}`, `hexr:process-role:editor` |
+  </Step>
+</Steps>
 
 ### Stage 3: Runtime Marker Files
 

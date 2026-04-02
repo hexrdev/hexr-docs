@@ -19,66 +19,7 @@ Hexr wraps your AI agent in production-grade infrastructure automatically. When 
 
 ## Five-Layer Platform Stack
 
-```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#6366F1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818CF8', 'lineColor': '#818CF8', 'secondaryColor': '#1E1B4B', 'tertiaryColor': '#312E81'}}}%%
-graph TB
-    subgraph L5["LAYER 5 · Management"]
-        direction LR
-        DASH["Dashboard"]
-        CAPI["Cloud API"]
-        GRAPH["Identity Graph"]
-        COMP["Compliance Engine"]
-    end
-
-    subgraph L4["LAYER 4 · Developer Experience"]
-        direction LR
-        CLI["hexr build / push / deploy"]
-        SDK["Python SDK · @hexr_agent"]
-        PYPI["Private PyPI"]
-    end
-
-    subgraph L3["LAYER 3 · Platform Services"]
-        direction LR
-        VAULT["Hexr Vault :8091"]
-        GW["Hexr Gateway :8090"]
-        CI2["Credential Injector :8080"]
-        A2A2["A2A Sidecar :8090"]
-        SB2["Sandbox :8092"]
-        GUARD["LLM Guard :8000"]
-        ENVOY2["Envoy Proxy"]
-        VALKEY["Valkey 3-node HA"]
-    end
-
-    subgraph L2["LAYER 2 · Observability"]
-        direction LR
-        OTEL["OTel Collector"]
-        PROM["Prometheus"]
-        JAEG["Jaeger"]
-        GRAF["Grafana · 42 panels"]
-    end
-
-    subgraph L1["LAYER 1 · Identity Foundation"]
-        direction LR
-        SPIRES["SPIRE Server"]
-        SPIREA["SPIRE Agent · DaemonSet"]
-        OIDC["OIDC Provider"]
-        AUTOREG["Auto-Registrar"]
-        FILECOL["File Collector · DaemonSet"]
-    end
-
-    L5 --> L4
-    L4 --> L3
-    L3 --> L2
-    L2 --> L1
-
-    style L5 fill:#3730A3,stroke:#818CF8,stroke-width:2px,color:#E0E7FF
-    style L4 fill:#4F46E5,stroke:#818CF8,stroke-width:2px,color:#E0E7FF
-    style L3 fill:#6366F1,stroke:#A5B4FC,stroke-width:2px,color:#E0E7FF
-    style L2 fill:#7C3AED,stroke:#C4B5FD,stroke-width:2px,color:#E0E7FF
-    style L1 fill:#8B5CF6,stroke:#DDD6FE,stroke-width:2px,color:#E0E7FF
-```
-
-Every Hexr deployment — cloud or self-hosted — consists of these five layers:
+Every Hexr deployment — cloud or self-hosted — consists of these five layers, each building on the one below:
 
 <AccordionGroup>
   <Accordion title="Layer 1: Identity Foundation" icon="fingerprint">
@@ -146,31 +87,36 @@ Every Hexr deployment — cloud or self-hosted — consists of these five layers
 
 ## How Identity Flows
 
-<Frame caption="Identity cascade: from decorator to SPIFFE SVID">
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant CLI as hexr CLI
-    participant K8s as Kubernetes
-    participant AR as Auto-Registrar
-    participant SPIRE as SPIRE Server
-    participant Agent as Agent Process
+From decorator to production-ready mTLS, the identity cascade has six stages:
 
-    Dev->>CLI: hexr build agent.py --tenant acme
-    CLI->>CLI: AST analysis → discover agents
-    CLI->>CLI: Generate process-context JSON
-    CLI->>CLI: Generate Dockerfile + manifests
-    Dev->>CLI: hexr deploy
-    CLI->>K8s: kubectl apply (Pod + ConfigMaps)
-    K8s->>AR: Pod watch event (hexr.io/* labels)
-    AR->>SPIRE: CreateEntry (per-process SPIFFE ID)
-    K8s->>Agent: Pod starts (4 containers)
-    Agent->>Agent: Write marker file to shared volume
-    Agent->>SPIRE: Fetch X.509 SVID (via Workload API)
-    SPIRE-->>Agent: spiffe://trust-domain/agent/acme/research-analyst
-    Agent->>Agent: mTLS ready. Identity established.
-```
-</Frame>
+<Steps>
+  <Step title="hexr build" icon="hammer">
+    The CLI performs **AST analysis** on your Python source. It discovers every `@hexr_agent`, 
+    `hexr_tool()`, and `hexr_llm()` call, then generates a Dockerfile, Kubernetes manifests, 
+    and per-process context JSON files.
+  </Step>
+  <Step title="hexr deploy" icon="upload">
+    Applies Pod manifests + ConfigMaps to your cluster via `kubectl apply`.
+  </Step>
+  <Step title="Auto-Registrar detects pod" icon="eye">
+    The Auto-Registrar watches for pods with `hexr.io/*` labels. When your pod appears, 
+    it reads the process context ConfigMaps and creates a **SPIRE registration entry** 
+    for each discovered process role.
+  </Step>
+  <Step title="Pod starts (4 containers)" icon="cubes">
+    Init container installs SDK. Then agent, envoy-sidecar, a2a-sidecar, and pid-mapper 
+    all start. The agent writes a marker file to the shared volume.
+  </Step>
+  <Step title="SVID issued" icon="certificate">
+    The agent process calls the SPIRE Workload API (via the shared socket). SPIRE matches 
+    the workload against the registration entry and issues an **X.509-SVID** with the 
+    per-process SPIFFE ID: `spiffe://trust-domain/agent/{tenant}/{agent}/{role}`.
+  </Step>
+  <Step title="mTLS ready" icon="shield-check">
+    Envoy loads the SVID via SDS. All inbound and outbound traffic is now **mutual TLS**. 
+    The agent can call other services, exchange credentials, and communicate with other agents.
+  </Step>
+</Steps>
 
 <Info>
   **Per-process, not per-container.** Hexr assigns SPIFFE identities to individual agent processes 
@@ -182,58 +128,56 @@ sequenceDiagram
 
 ## Agent Pod Architecture
 
-```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#6366F1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818CF8', 'lineColor': '#818CF8'}}}%%
-graph TB
-    subgraph POD["Agent Pod · tenant-acme namespace"]
-        direction TB
-        subgraph INIT["Init Container"]
-            INSTALL["install-hexr-sdk\nPrivate PyPI → shared volume"]
-        end
-        subgraph RUNTIME["Runtime Containers"]
-            direction LR
-            AGENT["agent :8080\nYour Python code\n@hexr_agent decorated"]
-            ENVOY["envoy-sidecar\n:15001 outbound mTLS\n:15006 inbound TLS"]
-            A2AS["a2a-sidecar :8090\nJSON-RPC 2.0\nValkey task state"]
-            PIDM["pid-mapper\nhostPID: true\nPID → SPIFFE mapping"]
-        end
-        subgraph VOLS["Shared Volumes"]
-            direction LR
-            SOCK["spire-agent-socket"]
-            CTX["hexr-context"]
-            HOST["host-hexr-context"]
-        end
-    end
+Every deployed agent runs as a Kubernetes Pod with **1 init + 3 runtime containers**, connected by shared volumes.
 
-    SPIRE["SPIRE Agent · DaemonSet"] -->|Workload API| SOCK
-    AGENT -.->|SVID| SOCK
-    PIDM -->|writes| CTX
-    PIDM -->|maps| HOST
-
-    style POD fill:#0F0E1A,stroke:#6366F1,stroke-width:3px,color:#E0E7FF
-    style INIT fill:#312E81,stroke:#818CF8,stroke-width:1px,color:#E0E7FF
-    style RUNTIME fill:#1E1B4B,stroke:#6366F1,stroke-width:2px,color:#E0E7FF
-    style VOLS fill:#1E1B4B,stroke:#4F46E5,stroke-width:1px,color:#A5B4FC
-    style AGENT fill:#4F46E5,stroke:#A5B4FC,stroke-width:2px,color:#E0E7FF
-    style ENVOY fill:#7C3AED,stroke:#C4B5FD,stroke-width:2px,color:#E0E7FF
-    style A2AS fill:#2563EB,stroke:#93C5FD,stroke-width:2px,color:#E0E7FF
-    style PIDM fill:#059669,stroke:#6EE7B7,stroke-width:2px,color:#E0E7FF
-    style SPIRE fill:#8B5CF6,stroke:#DDD6FE,stroke-width:2px,color:#E0E7FF
-```
-
-Every deployed agent runs as a Kubernetes Pod with 4 containers:
-
-| Container | Purpose | Key Responsibilities |
-|-----------|---------|---------------------|
-| **agent** | Your Python code | Runs `@hexr_agent`-decorated function. Listens on `:8080` for A2A bridge calls. |
-| **envoy-sidecar** | mTLS proxy | Terminates inbound TLS (`:15006`), initiates outbound mTLS (`:15001`). Loads X.509-SVIDs via SPIRE SDS. |
-| **a2a-sidecar** | Agent communication | JSON-RPC 2.0 dispatch (`:8090`). Task state in Valkey. SSE streaming. Prometheus metrics. |
-| **pid-mapper** | Identity mapper | Reads `/proc` (hostPID), maps container PIDs to host PIDs, writes context JSON for SPIRE attestation. |
-
-Shared volumes connect them:
-- **Identity Socket** — SPIRE Agent Workload API (`/run/spire/sockets/agent.sock`)
-- **Context Volume** — Process context JSON files (`/tmp/hexr-context/`)  
-- **Host Volume** — Host PID namespace mapping (`/host-hexr-context/`)
+<Tabs>
+  <Tab title="Containers">
+    <Steps>
+      <Step title="Init: install-hexr-sdk" icon="download">
+        Pulls the Hexr SDK from the private PyPI registry into a shared volume. 
+        Runs once before any runtime container starts.
+      </Step>
+      <Step title="agent · :8080" icon="robot">
+        **Your Python code.** Runs your `@hexr_agent`-decorated function. Listens on `:8080` for 
+        inbound A2A bridge calls. Reads SVID from SPIRE socket for identity.
+      </Step>
+      <Step title="envoy-sidecar · :15001/:15006" icon="shield-halved">
+        **mTLS proxy.** Terminates inbound TLS on `:15006`, initiates outbound mTLS on `:15001`. 
+        Loads X.509-SVIDs via SPIRE SDS. Zero-code mesh encryption.
+      </Step>
+      <Step title="a2a-sidecar · :8090" icon="arrows-left-right">
+        **Agent communication.** JSON-RPC 2.0 dispatch. Task state persisted in Valkey. 
+        SSE streaming for real-time updates. Prometheus metrics exported.
+      </Step>
+      <Step title="pid-mapper · hostPID: true" icon="fingerprint">
+        **Identity mapper.** Reads `/proc` with host PID namespace access. Maps container PIDs 
+        to host PIDs. Writes process context JSON for SPIRE workload attestation.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="Shared Volumes">
+    | Volume | Mount Path | Purpose |
+    |--------|-----------|---------|
+    | **spire-agent-socket** | `/run/spire/sockets/agent.sock` | SPIRE Agent Workload API — all containers fetch SVIDs through this |
+    | **hexr-context** | `/tmp/hexr-context/` | Process context JSON files written by pid-mapper, read by SPIRE attestor |
+    | **host-hexr-context** | `/host-hexr-context/` | Host PID namespace mapping — pid-mapper writes, File Collector forwards |
+  </Tab>
+  <Tab title="Network Flow">
+    ```
+    Incoming Request
+         │
+         ▼
+    envoy-sidecar (:15006)     ◄── terminates TLS, verifies peer SVID
+         │
+         ▼
+    agent (:8080)              ◄── your @hexr_agent function runs
+         │
+         ├──► envoy-sidecar (:15001) ──► external APIs (mTLS)
+         │
+         └──► a2a-sidecar (:8090)   ──► other agent pods (JSON-RPC 2.0)
+    ```
+  </Tab>
+</Tabs>
 
 ---
 

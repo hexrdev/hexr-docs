@@ -6,12 +6,21 @@ description: "Every agent process gets a unique cryptographic identity — here'
 
 ## What Is SPIFFE?
 
-**SPIFFE** (Secure Production Identity Framework for Everyone) is a set of open standards for service identity. A SPIFFE ID is a URI that uniquely identifies a workload:
+**SPIFFE** (Secure Production Identity Framework for Everyone) is a set of open standards for service identity. A SPIFFE ID is a URI that uniquely identifies a workload.
 
+**SPIFFE ID structure:**
+
+| Part | Example | Description |
+|------|---------|-------------|
+| Trust domain | `hexr.cloud` | Your SPIRE trust domain |
+| Type | `agent` | Workload type (always `agent` for Hexr) |
+| Tenant | `acme-corp` | Tenant namespace |
+| Agent name | `research-analyst` | From `@hexr_agent(name=...)` |
+| Role | `researcher` | Sub-agent process role |
+
+**Full example:**
 ```
 spiffe://hexr.cloud/agent/acme-corp/research-analyst/researcher
-         └──────────┘ └────┘ └─────────┘ └────────────────┘ └────────┘
-         trust domain  type  tenant       agent name         role
 ```
 
 ## What Is an SVID?
@@ -46,26 +55,29 @@ This enables:
 
 ## Lifecycle
 
-```mermaid
-sequenceDiagram
-    participant Build as hexr build
-    participant Pod as Agent Pod
-    participant PID as PID Mapper
-    participant SPIRE as SPIRE
-    participant Cloud as Cloud Provider
+The complete lifecycle of a SPIFFE identity — from build to cloud access:
 
-    Build->>Build: AST analysis → discover roles
-    Build->>Build: Generate process contexts
-    
-    Pod->>Pod: Init container installs SDK
-    Pod->>PID: Process started (researcher, PID 42)
-    PID->>SPIRE: Request SVID for .../researcher
-    SPIRE-->>PID: X.509 SVID (5min TTL, auto-renewed)
-    
-    Pod->>Cloud: hexr_tool("gcp_bigquery")
-    Note over Pod,Cloud: JWT-SVID presented to cloud STS
-    Cloud-->>Pod: Temporary credentials
-```
+<Steps>
+  <Step title="Build: AST Discovery" icon="magnifying-glass">
+    `hexr build` scans your Python source via AST analysis. Discovers all agent roles 
+    (researcher, writer, editor) and generates process context JSON files.
+  </Step>
+  <Step title="Pod starts: SDK installed" icon="download">
+    Init container installs the Hexr SDK from private PyPI into a shared volume.
+  </Step>
+  <Step title="PID Mapper: Process registration" icon="fingerprint">
+    When the agent process starts (e.g., "researcher", PID 42), the PID Mapper reads `/proc`, 
+    maps the container PID to the host PID, and writes enriched context JSON.
+  </Step>
+  <Step title="SPIRE: SVID issued" icon="certificate">
+    The Auto-Registrar creates a SPIRE entry. SPIRE issues an **X.509-SVID** with a 5-minute 
+    TTL (auto-renewed at 50% TTL). The SVID contains the per-process SPIFFE ID.
+  </Step>
+  <Step title="Runtime: mTLS + cloud access" icon="shield-check">
+    The agent uses its SVID for mTLS (via Envoy) and presents its JWT-SVID to cloud 
+    providers (AWS STS, GCP WIF, Azure) for temporary credential exchange.
+  </Step>
+</Steps>
 
 ---
 
