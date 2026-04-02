@@ -4,16 +4,50 @@ sidebarTitle: "Introduction"
 description: "The identity-first runtime platform for AI agents. Deploy secure, observable, multi-cloud agents with cryptographic identity — from a single Python decorator."
 ---
 
-<img
-  className="block dark:hidden"
-  src="/images/hero-light.svg"
-  alt="Hexr Platform"
-/>
-<img
-  className="hidden dark:block"
-  src="/images/hero-dark.svg"
-  alt="Hexr Platform"
-/>
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#6366F1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818CF8', 'lineColor': '#818CF8', 'secondaryColor': '#1E1B4B', 'tertiaryColor': '#312E81'}}}%%
+graph TB
+    subgraph L4["<b>LAYER 4 · Developer Experience</b>"]
+        direction LR
+        CLI["hexr build / push / deploy"]
+        SDK["@hexr_agent decorator"]
+        DASH["Dashboard · Identity Graph"]
+    end
+
+    subgraph L3["<b>LAYER 3 · Platform Services</b>"]
+        direction LR
+        VAULT["Hexr Vault"]
+        GW["Hexr Gateway"]
+        A2A["A2A Protocol"]
+        CI["Credential Injector"]
+        SB["Sandbox · LLM Guard"]
+    end
+
+    subgraph L2["<b>LAYER 2 · Observability</b>"]
+        direction LR
+        OTEL["OTel Collector"]
+        PROM["Prometheus"]
+        JAEG["Jaeger"]
+        GRAF["Grafana"]
+    end
+
+    subgraph L1["<b>LAYER 1 · Identity Foundation</b>"]
+        direction LR
+        SPIRES["SPIRE Server"]
+        SPIREA["SPIRE Agent"]
+        OIDC["OIDC Provider"]
+        FED["Federation"]
+    end
+
+    L4 --> L3
+    L3 --> L2
+    L2 --> L1
+
+    style L4 fill:#4F46E5,stroke:#818CF8,stroke-width:2px,color:#E0E7FF
+    style L3 fill:#6366F1,stroke:#A5B4FC,stroke-width:2px,color:#E0E7FF
+    style L2 fill:#7C3AED,stroke:#C4B5FD,stroke-width:2px,color:#E0E7FF
+    style L1 fill:#8B5CF6,stroke:#DDD6FE,stroke-width:2px,color:#E0E7FF
+```
 
 ## Choose Your Deployment Model
 

@@ -19,9 +19,64 @@ Hexr wraps your AI agent in production-grade infrastructure automatically. When 
 
 ## Five-Layer Platform Stack
 
-<Frame caption="FIG. 1 — Hexr Platform Architecture (from patent application)">
-  <img src="/images/fig1-platform-stack.png" alt="Five-Layer Platform Stack" />
-</Frame>
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#6366F1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818CF8', 'lineColor': '#818CF8', 'secondaryColor': '#1E1B4B', 'tertiaryColor': '#312E81'}}}%%
+graph TB
+    subgraph L5["LAYER 5 · Management"]
+        direction LR
+        DASH["Dashboard"]
+        CAPI["Cloud API"]
+        GRAPH["Identity Graph"]
+        COMP["Compliance Engine"]
+    end
+
+    subgraph L4["LAYER 4 · Developer Experience"]
+        direction LR
+        CLI["hexr build / push / deploy"]
+        SDK["Python SDK · @hexr_agent"]
+        PYPI["Private PyPI"]
+    end
+
+    subgraph L3["LAYER 3 · Platform Services"]
+        direction LR
+        VAULT["Hexr Vault :8091"]
+        GW["Hexr Gateway :8090"]
+        CI2["Credential Injector :8080"]
+        A2A2["A2A Sidecar :8090"]
+        SB2["Sandbox :8092"]
+        GUARD["LLM Guard :8000"]
+        ENVOY2["Envoy Proxy"]
+        VALKEY["Valkey 3-node HA"]
+    end
+
+    subgraph L2["LAYER 2 · Observability"]
+        direction LR
+        OTEL["OTel Collector"]
+        PROM["Prometheus"]
+        JAEG["Jaeger"]
+        GRAF["Grafana · 42 panels"]
+    end
+
+    subgraph L1["LAYER 1 · Identity Foundation"]
+        direction LR
+        SPIRES["SPIRE Server"]
+        SPIREA["SPIRE Agent · DaemonSet"]
+        OIDC["OIDC Provider"]
+        AUTOREG["Auto-Registrar"]
+        FILECOL["File Collector · DaemonSet"]
+    end
+
+    L5 --> L4
+    L4 --> L3
+    L3 --> L2
+    L2 --> L1
+
+    style L5 fill:#3730A3,stroke:#818CF8,stroke-width:2px,color:#E0E7FF
+    style L4 fill:#4F46E5,stroke:#818CF8,stroke-width:2px,color:#E0E7FF
+    style L3 fill:#6366F1,stroke:#A5B4FC,stroke-width:2px,color:#E0E7FF
+    style L2 fill:#7C3AED,stroke:#C4B5FD,stroke-width:2px,color:#E0E7FF
+    style L1 fill:#8B5CF6,stroke:#DDD6FE,stroke-width:2px,color:#E0E7FF
+```
 
 Every Hexr deployment — cloud or self-hosted — consists of these five layers:
 
@@ -127,9 +182,44 @@ sequenceDiagram
 
 ## Agent Pod Architecture
 
-<Frame caption="FIG. 2 — Agent Pod with 4 containers + shared volumes">
-  <img src="/images/fig2-agent-pod.png" alt="Agent Pod Architecture" />
-</Frame>
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#6366F1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818CF8', 'lineColor': '#818CF8'}}}%%
+graph TB
+    subgraph POD["Agent Pod · tenant-acme namespace"]
+        direction TB
+        subgraph INIT["Init Container"]
+            INSTALL["install-hexr-sdk\nPrivate PyPI → shared volume"]
+        end
+        subgraph RUNTIME["Runtime Containers"]
+            direction LR
+            AGENT["agent :8080\nYour Python code\n@hexr_agent decorated"]
+            ENVOY["envoy-sidecar\n:15001 outbound mTLS\n:15006 inbound TLS"]
+            A2AS["a2a-sidecar :8090\nJSON-RPC 2.0\nValkey task state"]
+            PIDM["pid-mapper\nhostPID: true\nPID → SPIFFE mapping"]
+        end
+        subgraph VOLS["Shared Volumes"]
+            direction LR
+            SOCK["spire-agent-socket"]
+            CTX["hexr-context"]
+            HOST["host-hexr-context"]
+        end
+    end
+
+    SPIRE["SPIRE Agent · DaemonSet"] -->|Workload API| SOCK
+    AGENT -.->|SVID| SOCK
+    PIDM -->|writes| CTX
+    PIDM -->|maps| HOST
+
+    style POD fill:#0F0E1A,stroke:#6366F1,stroke-width:3px,color:#E0E7FF
+    style INIT fill:#312E81,stroke:#818CF8,stroke-width:1px,color:#E0E7FF
+    style RUNTIME fill:#1E1B4B,stroke:#6366F1,stroke-width:2px,color:#E0E7FF
+    style VOLS fill:#1E1B4B,stroke:#4F46E5,stroke-width:1px,color:#A5B4FC
+    style AGENT fill:#4F46E5,stroke:#A5B4FC,stroke-width:2px,color:#E0E7FF
+    style ENVOY fill:#7C3AED,stroke:#C4B5FD,stroke-width:2px,color:#E0E7FF
+    style A2AS fill:#2563EB,stroke:#93C5FD,stroke-width:2px,color:#E0E7FF
+    style PIDM fill:#059669,stroke:#6EE7B7,stroke-width:2px,color:#E0E7FF
+    style SPIRE fill:#8B5CF6,stroke:#DDD6FE,stroke-width:2px,color:#E0E7FF
+```
 
 Every deployed agent runs as a Kubernetes Pod with 4 containers:
 

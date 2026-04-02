@@ -84,8 +84,7 @@
               "security/threat-model",
               "security/threat-chains",
               "security/owasp-genai",
-              "security/compliance-frameworks",
-              "security/compliance"
+              "security/compliance-frameworks"
             ]
           }
         ]

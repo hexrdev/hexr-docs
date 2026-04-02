@@ -1,7 +1,52 @@
 ---
 title: "Compliance Frameworks"
 sidebarTitle: "Compliance"
-description: "How Hexr's architecture maps to SOC 2, NIST AI RMF, GDPR, and HIPAA requirements."
+description: "How Hexr's architecture maps to SOC 2, NIST AI RMF, GDPR, HIPAA, and FedRAMP requirements."
+---
+
+## Compliance Readiness
+
+| Framework | Status | Key Controls |
+|-----------|--------|-------------|
+| **SOC 2 Type II** | Architecture ready | Encryption at rest, audit logging, access controls |
+| **NIST AI RMF** | Architecture ready | Agent discovery, metrics, policy management |
+| **GDPR** | Architecture ready | Data isolation per tenant, encryption, right to deletion |
+| **HIPAA** | Architecture ready | PHI isolation, audit trails, encryption |
+| **FedRAMP** | Self-hosted air-gapped | Air-gapped deployment, FIPS-compatible cryptography |
+
+---
+
+## Key Controls
+
+### Encryption
+
+| Data State | Method |
+|-----------|--------|
+| In transit | mTLS (SPIFFE SVIDs) — all service-to-service communication |
+| At rest (secrets) | AES-256-GCM (Hexr Vault) |
+| At rest (database) | PostgreSQL with storage-level encryption |
+| At rest (cache) | Valkey in-cluster only (no external access) |
+
+### Access Control
+
+| Control | Implementation |
+|---------|---------------|
+| Identity | SPIFFE per-process identity (no shared credentials) |
+| Authentication | mTLS + API key authentication |
+| Authorization | OPA policies at every service boundary |
+| Tenant isolation | Kubernetes namespace isolation |
+| Data isolation | SPIFFE-scoped secret access |
+
+### Audit
+
+| Audit Capability | Implementation |
+|-----------------|---------------|
+| Request logging | Every request traced via OpenTelemetry |
+| Credential access | Every STS exchange logged with SPIFFE ID |
+| Secret access | Every Vault read/write logged |
+| LLM interactions | Every prompt/response logged (configurable) |
+| Configuration changes | Kubernetes audit logging |
+
 ---
 
 ## Framework Mapping

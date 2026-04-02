@@ -62,11 +62,6 @@
       "name": "Community",
       "icon": "discord",
       "url": "https://discord.gg/hexr"
-    },
-    {
-      "name": "Status",
-      "icon": "signal-bars",
-      "url": "https://status.hexr.dev"
     }
   ],
   "navigation": [
@@ -115,8 +110,7 @@
         "security/threat-model",
         "security/threat-chains",
         "security/owasp-genai",
-        "security/compliance-frameworks",
-        "security/compliance"
+        "security/compliance-frameworks"
       ]
     },
     {
