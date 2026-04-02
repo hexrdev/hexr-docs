@@ -218,11 +218,6 @@
     "github": "https://github.com/hexr-dev",
     "linkedin": "https://linkedin.com/company/hexr"
   },
-  "analytics": {
-    "posthog": {
-      "apiKey": ""
-    }
-  },
   "feedback": {
     "thumbsRating": true
   },
