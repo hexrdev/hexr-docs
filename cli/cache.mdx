@@ -1,0 +1,71 @@
+---
+title: "hexr cache"
+sidebarTitle: "hexr cache"
+description: "Manage the credential cache — view status, clear cached credentials, and export cache metrics."
+---
+
+## Usage
+
+```bash
+hexr cache <subcommand>
+```
+
+---
+
+## Subcommands
+
+### hexr cache status
+
+Show current cache state:
+
+```bash
+$ hexr cache status
+
+Credential Cache Status:
+┌──────────────────┬──────────┬──────────┬────────────┐
+│ Service          │ Tier     │ TTL      │ Expires    │
+├──────────────────┼──────────┼──────────┼────────────┤
+│ aws_s3           │ L1 (mem) │ 12m      │ 14:32 UTC  │
+│ gcp_bigquery     │ L2 (val) │ 45m      │ 15:07 UTC  │
+│ azure_storage    │ expired  │ —        │ —          │
+└──────────────────┴──────────┴──────────┴────────────┘
+
+Hit Rates (last 1h):
+  L1 (memory):   78.3%
+  L2 (Valkey):   18.4%
+  L3 (exchange):  3.3%
+```
+
+### hexr cache clear
+
+Clear all cached credentials:
+
+```bash
+$ hexr cache clear
+
+✓ L1 cache cleared (in-memory)
+✓ L2 cache cleared (Valkey)
+
+Note: Next hexr_tool() call will perform a full credential exchange.
+```
+
+### hexr cache metrics
+
+Export cache performance metrics:
+
+```bash
+$ hexr cache metrics
+
+Cache Metrics (last 24h):
+  Total lookups:    12,847
+  L1 hits:           9,634 (75.0%)
+  L2 hits:           2,891 (22.5%)
+  L3 exchanges:        322 (2.5%)
+  
+  Avg L1 latency:   0.001ms
+  Avg L2 latency:   2.1ms
+  Avg L3 latency:   142ms
+  
+  Proactive refreshes: 48
+  Failed exchanges:    0
+```

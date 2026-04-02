@@ -1,0 +1,55 @@
+---
+title: "CLI Installation"
+sidebarTitle: "Installation"
+description: "Install the hexr CLI tool."
+---
+
+## Install
+
+The `hexr` CLI is included in the Python SDK package:
+
+<CodeGroup>
+```bash uv (recommended)
+uv pip install hexr --index-url https://pypi.hexr.cloud/simple/
+```
+
+```bash pip
+pip install hexr --index-url https://pypi.hexr.cloud/simple/
+```
+</CodeGroup>
+
+## Verify
+
+```bash
+$ hexr --version
+hexr 0.2.1
+
+$ hexr --help
+Usage: hexr [OPTIONS] COMMAND [ARGS]...
+
+  Hexr — Identity-first runtime for AI agents.
+
+Options:
+  --verbose, -v  Verbose output
+  --debug        Debug logging
+  --version      Show version
+
+Commands:
+  build    Analyze agent and generate deployment artifacts
+  push     Build and push container image
+  deploy   Deploy agent to Kubernetes
+  audit    Security audit and SBOM generation
+  login    Authenticate with Hexr Cloud
+  logout   Remove saved credentials
+  status   Show deployed agents
+  cache    Credential cache management
+```
+
+## Prerequisites
+
+| Tool | Required For | Install |
+|------|-------------|---------|
+| Python 3.10+ | CLI execution | `brew install python@3.11` |
+| Docker | `hexr push` (local builds) | [docker.com](https://docker.com) |
+| kubectl | `hexr deploy`, `hexr status` | `brew install kubectl` |
+| gcloud | `hexr push --cloud` | [cloud.google.com/sdk](https://cloud.google.com/sdk) |

@@ -1,0 +1,106 @@
+---
+title: "CLI Overview"
+sidebarTitle: "Overview"
+description: "The hexr CLI takes your agent from Python file to production Kubernetes deployment in three commands."
+---
+
+## Installation
+
+<CodeGroup>
+```bash uv (recommended)
+uv pip install hexr --index-url https://pypi.hexr.cloud/simple/
+```
+
+```bash pip
+pip install hexr --index-url https://pypi.hexr.cloud/simple/
+```
+</CodeGroup>
+
+The CLI is included in the `hexr` Python package — no separate installation needed.
+
+---
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| [`hexr build`](/cli/build) | AST analysis → Dockerfile + K8s manifests + SPIFFE contexts |
+| [`hexr push`](/cli/push) | Build container image + vulnerability scan + push to registry |
+| [`hexr deploy`](/cli/deploy) | Apply manifests to Kubernetes cluster |
+| [`hexr audit`](/cli/audit) | Vulnerability scan + SBOM generation + drift detection |
+| [`hexr login`](/cli/login) | Authenticate with Hexr Cloud |
+| [`hexr status`](/cli/status) | Show deployed agents |
+| [`hexr cache`](/cli/cache) | Credential cache management |
+
+---
+
+## Global Flags
+
+| Flag | Description |
+|------|-------------|
+| `--verbose, -v` | Verbose output |
+| `--debug` | Debug-level logging |
+| `--version` | Show version |
+
+---
+
+## The Three-Command Workflow
+
+```bash
+# Step 1: Analyze your agent and generate everything needed for deployment
+$ hexr build my_agent.py --tenant acme-corp
+
+Analyzing my_agent.py...
+  Framework: crewai (detected from imports)
+  Agents: 3 (researcher, writer, editor)
+  Resources: aws_s3, gcp_bigquery
+  A2A: enabled
+
+Generated .hexr/:
+  ├── Dockerfile
+  ├── requirements.txt
+  ├── agent-pod.yaml
+  ├── namespace.yaml
+  ├── rbac.yaml
+  ├── agent-card.yaml (ConfigMap)
+  ├── process-contexts/
+  │   ├── researcher.json
+  │   ├── writer.json
+  │   └── editor.json
+  └── hexr-manifest.json
+
+# Step 2: Build the container and push to a registry
+$ hexr push
+
+Detected build strategies:
+  1. Docker Build Cloud (cloud-sugiv-hexr) [RECOMMENDED]
+  2. Local buildx
+  3. Basic Docker
+
+Select strategy [1]: 1
+
+Building for: linux/amd64, linux/arm64
+Pushing to: us-central1-docker.pkg.dev/hexr-cloud-prod/hexr-images/acme-research-analyst:latest
+
+✓ Image pushed successfully
+✓ Vulnerability scan: 0 critical, 0 high
+
+# Step 3: Deploy to Kubernetes
+$ hexr deploy
+
+Detected clusters:
+  1. hexr-cloud (GKE, us-central1-a)
+  2. do-nyc1-hexr-demo (DigitalOcean)
+
+Select cluster [1]: 1
+
+Applying manifests to tenant-acme-corp...
+  ✓ Namespace created
+  ✓ RBAC applied
+  ✓ Agent pod created
+  
+Waiting for pod readiness...
+  ✓ acme-research-analyst: 4/4 containers running
+  
+Agent deployed! SPIFFE ID: spiffe://hexr.cloud/agent/acme-corp/research-analyst/main
+```

@@ -1,0 +1,95 @@
+---
+title: "Browser Automation"
+sidebarTitle: "Browser Agent"
+description: "Give your AI agent a browser for web research, form submission, and visual analysis."
+---
+
+## Overview
+
+`hexr.browser` provides headless Chromium browser access to your agents — enabling web research, form filling, data extraction, and screenshot analysis.
+
+---
+
+## Web Research
+
+```python
+from hexr import hexr_agent, hexr_llm
+from hexr.browser import browse
+
+@hexr_agent(name="web-researcher", tenant="acme-corp")
+def main():
+    # Browse a page and get structured content
+    result = browse(
+        url="https://news.ycombinator.com",
+        actions=["extract_text"],
+    )
+    
+    # Summarize with an LLM
+    summary = hexr_llm(
+        provider="openai",
+        model="gpt-4o",
+        prompt=f"Summarize the top stories:\n{result.text}",
+    )
+    print(summary)
+```
+
+---
+
+## Visual Analysis
+
+```python
+result = browse(
+    url="https://example.com/dashboard",
+    actions=["screenshot"],
+)
+
+# Send the screenshot to a vision model
+analysis = hexr_llm(
+    provider="openai",
+    model="gpt-4o",
+    prompt="What does this dashboard show?",
+    images=[result.screenshot],
+)
+```
+
+---
+
+## Form Submission
+
+```python
+result = browse(
+    url="https://example.com/login",
+    actions=[
+        {"fill": {"selector": "#email", "value": "user@example.com"}},
+        {"fill": {"selector": "#password", "value": vault.get("APP_PASSWORD")}},
+        {"click": "#submit-button"},
+        "extract_text",
+    ],
+)
+print(result.text)  # Content after login
+```
+
+---
+
+## Available Actions
+
+| Action | Description |
+|--------|-------------|
+| `extract_text` | Extract all visible text content |
+| `extract_links` | Get all hyperlinks |
+| `screenshot` | Take a PNG screenshot |
+| `fill` | Fill a form field |
+| `click` | Click an element |
+| `wait` | Wait for an element to appear |
+| `scroll` | Scroll the page |
+
+---
+
+## Security Model
+
+| Protection | Description |
+|-----------|-------------|
+| **Isolated browser** | Runs in a sandboxed container |
+| **No cookie persistence** | Session destroyed after each call |
+| **URL allowlisting** | OPA policies restrict accessible domains |
+| **SPIFFE authenticated** | Browser access tied to agent identity |

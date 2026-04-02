@@ -1,0 +1,47 @@
+---
+title: "Compliance Frameworks"
+sidebarTitle: "Compliance"
+description: "How Hexr's architecture maps to SOC 2, NIST AI RMF, GDPR, and HIPAA requirements."
+---
+
+## Framework Mapping
+
+### SOC 2 Type II
+
+| Control Area | Hexr Implementation |
+|-------------|-------------------|
+| **CC6.1** Logical Access | SPIFFE identity, OPA policies, mTLS |
+| **CC6.2** User Authentication | SPIFFE SVIDs (X.509), API key authentication |
+| **CC6.3** Access Authorization | OPA per-process policies, role-based scoping |
+| **CC6.6** System Boundaries | Kubernetes namespaces, Firecracker microVMs |
+| **CC7.1** Monitoring | OpenTelemetry traces, Prometheus metrics |
+| **CC7.2** Incident Response | Audit logs, credential revocation |
+| **CC8.1** Change Management | `hexr build` reproducible artifacts, `hexr audit` drift detection |
+
+### NIST AI Risk Management Framework
+
+| Function | Hexr Implementation |
+|----------|-------------------|
+| **GOVERN** | Tenant isolation, role-based access, API key management |
+| **MAP** | `hexr build` AST analysis maps all agent capabilities |
+| **MEASURE** | OpenTelemetry metrics, cost attribution, LLM Guard statistics |
+| **MANAGE** | Dashboard, OPA policies, credential rotation, audit trail |
+
+### GDPR
+
+| Requirement | Hexr Implementation |
+|-------------|-------------------|
+| Data minimization | Per-process credential scoping |
+| Encryption | AES-256-GCM (vault), mTLS (transit) |
+| Access controls | SPIFFE identity + OPA policies |
+| Audit trail | OpenTelemetry traces on every operation |
+| PII protection | LLM Guard PII scanner |
+
+### HIPAA
+
+| Safeguard | Hexr Implementation |
+|-----------|-------------------|
+| Access controls | SPIFFE + OPA + namespace isolation |
+| Audit controls | OpenTelemetry, Loki logs |
+| Transmission security | mTLS everywhere |
+| Encryption | AES-256-GCM at rest, TLS 1.3 in transit |

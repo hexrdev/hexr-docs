@@ -1,0 +1,113 @@
+---
+title: "Code Execution in Sandbox"
+sidebarTitle: "Code Execution"
+description: "Run untrusted code safely in Firecracker microVMs with hexr.sandbox."
+---
+
+## Why Sandbox?
+
+AI agents often need to execute generated code — data analysis, web scraping, calculations. Running this directly is dangerous. Hexr Sandbox provides:
+
+- **Firecracker microVM** isolation
+- **No network access** by default
+- **Resource limits** (CPU, memory, time)
+- **Destroyed after execution** (no persistent state)
+
+---
+
+## Basic Usage
+
+```python
+from hexr import hexr_agent
+from hexr.sandbox import exec
+
+@hexr_agent(name="data-analyst", tenant="acme-corp")
+def main():
+    result = exec("""
+import pandas as pd
+import numpy as np
+
+data = pd.DataFrame({
+    'revenue': [100, 200, 150, 300, 250],
+    'costs': [80, 150, 100, 200, 180],
+})
+data['profit'] = data['revenue'] - data['costs']
+print(data.describe().to_string())
+print(f"\\nTotal profit: ${data['profit'].sum()}")
+""")
+    
+    print(result.stdout)
+    # →         revenue  costs  profit
+    #   count     5.00   5.00    5.00
+    #   mean    200.00 142.00   58.00
+    #   ...
+    #   Total profit: $290
+```
+
+---
+
+## LLM + Sandbox Pattern
+
+A common pattern: ask an LLM to generate code, then execute it safely:
+
+```python
+from hexr import hexr_agent, hexr_llm
+from hexr.sandbox import exec
+
+@hexr_agent(name="code-agent", tenant="acme-corp")
+def main():
+    # Ask LLM to generate analysis code
+    code = hexr_llm(
+        provider="openai",
+        model="gpt-4o",
+        prompt="Write Python code to calculate the first 20 Fibonacci numbers",
+    )
+    
+    # Execute safely in a microVM
+    result = exec(code, language="python", timeout=10)
+    
+    if result.exit_code == 0:
+        print(f"Output: {result.stdout}")
+    else:
+        print(f"Error: {result.stderr}")
+```
+
+---
+
+## Multi-Language Support
+
+```python
+# Python
+result = exec("print('Hello from Python')", language="python")
+
+# JavaScript
+result = exec("console.log('Hello from Node.js')", language="javascript")
+
+# Shell
+result = exec("echo 'Hello from Bash' && uname -a", language="bash")
+```
+
+---
+
+## Resource Limits
+
+```python
+result = exec(
+    code="...",
+    language="python",
+    timeout=60,          # Max 60 seconds
+    memory_mb=512,       # Max 512MB RAM
+)
+```
+
+---
+
+## Security Guarantees
+
+| Threat | Protection |
+|--------|-----------|
+| Code escapes to host | Firecracker KVM isolation |
+| Network exfiltration | No network by default |
+| Disk persistence | Read-only rootfs, destroyed after exec |
+| Resource exhaustion | CPU + memory + time limits |
+| Cross-agent interference | Separate microVM per execution |

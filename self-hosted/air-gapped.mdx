@@ -1,0 +1,121 @@
+---
+title: "Air-Gapped Deployment"
+sidebarTitle: "Air-Gapped"
+description: "Deploy Hexr in fully disconnected environments with no internet access."
+---
+
+## Overview
+
+Hexr supports fully air-gapped deployment for classified environments, FedRAMP, and strict compliance requirements. All components run without any external network access.
+
+---
+
+## Prerequisites
+
+| Requirement | Description |
+|-------------|-------------|
+| Private container registry | Harbor, Nexus, or similar |
+| Private Helm repository | ChartMuseum or OCI registry |
+| Kubernetes cluster | No internet access |
+| PostgreSQL | Internal database server |
+| Image bundle | Downloaded from Hexr |
+
+---
+
+## Step 1: Download Image Bundle
+
+On an internet-connected machine:
+
+```bash
+# Download all Hexr images
+hexr bundle download --version 0.8.0 --output hexr-bundle.tar.gz
+
+# Contents:
+# - auto-registrar:v0.2.2
+# - cred-injector:v0.4.2
+# - hexr-vault:v0.1.1
+# - hexr-gateway:v0.4.1
+# - hexr-dashboard:v0.3.11
+# - hexr-sandbox:v0.2.1
+# - a2a-sidecar:v0.1.1
+# - enterprise-pid-mapper:latest
+# - cloud-api:v0.8.0
+# - envoy:v1.28
+# - valkey:8
+# - otel-collector:latest
+# - spire-server + spire-agent
+```
+
+---
+
+## Step 2: Transfer to Air-Gapped Network
+
+Transfer `hexr-bundle.tar.gz` via approved media (USB, DVD, cross-domain solution).
+
+---
+
+## Step 3: Load Images
+
+```bash
+# Extract and push to your private registry
+hexr bundle push --file hexr-bundle.tar.gz \
+  --registry registry.internal.example.com/hexr
+```
+
+Or manually:
+
+```bash
+docker load < hexr-bundle.tar.gz
+docker tag hexr-auto-registrar:v0.2.2 registry.internal/hexr/auto-registrar:v0.2.2
+docker push registry.internal/hexr/auto-registrar:v0.2.2
+# ... repeat for all images
+```
+
+---
+
+## Step 4: Install via Helm
+
+```yaml
+# values-airgapped.yaml
+global:
+  registry: registry.internal.example.com/hexr
+  trustDomain: classified.internal
+
+spire:
+  oidc:
+    enabled: false  # No OIDC in air-gapped (no external cloud federation)
+```
+
+```bash
+helm install hexr-runtime ./hexr-runtime \
+  -n hexr-system \
+  -f values-airgapped.yaml \
+  --timeout 10m
+```
+
+---
+
+## Air-Gapped Specifics
+
+| Feature | Air-Gapped Behavior |
+|---------|-------------------|
+| Cloud credential exchange | Disabled (no external STS) |
+| OIDC Discovery | Disabled (no public endpoint) |
+| Tool calls | Internal APIs only |
+| LLM providers | Self-hosted models (Ollama, vLLM) |
+| Dashboard | Internal hostname only |
+| Telemetry | Internal Prometheus + Grafana |
+
+---
+
+## DigitalOcean Air-Gapped
+
+Hexr was originally built for air-gapped deployment on DigitalOcean Kubernetes:
+
+```bash
+# DO cluster with no public ingress
+doctl kubernetes cluster create hexr-airgap \
+  --region nyc1 --node-pool "name=default;size=s-4vcpu-8gb;count=3"
+```
+
+This deployment model remains fully supported alongside the Hexr Cloud offering.

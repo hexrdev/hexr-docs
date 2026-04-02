@@ -1,0 +1,71 @@
+---
+title: "Platform Overview"
+sidebarTitle: "Overview"
+description: "The Hexr platform runs 10+ services in every agent pod and across the cluster — here is what each one does."
+---
+
+## Architecture
+
+Every Hexr agent pod runs as a **bare Kubernetes Pod** (not a Deployment) with these containers:
+
+```mermaid
+graph TB
+    subgraph "Agent Pod"
+        INIT["init: install-hexr-sdk"]
+        AGENT["Agent Container<br/>(your code)"]
+        ENVOY["Envoy Proxy Sidecar"]
+        A2A["A2A Sidecar"]
+        PID["PID Mapper"]
+    end
+
+    subgraph "Cluster Services"
+        SPIRE["SPIRE Server + Agent"]
+        REG["Auto-Registrar"]
+        CRED["Credential Injector"]
+        VAULT["Hexr Vault"]
+        GW["Hexr Gateway"]
+        SAND["Sandbox Engine"]
+        GUARD["LLM Guard"]
+        VALKEY["Valkey (Redis)"]
+        OTEL["OTel Collector"]
+        OPA["OPA (sidecar per pod)"]
+    end
+
+    AGENT --> ENVOY --> CRED
+    AGENT --> A2A
+    PID --> SPIRE
+    AGENT --> VAULT
+    AGENT --> GW
+    AGENT --> SAND
+    AGENT --> GUARD
+    REG --> SPIRE
+```
+
+---
+
+## Pod Containers
+
+| Container | Purpose | Port |
+|-----------|---------|------|
+| [Agent Container](/platform/agent-container) | Your Python code + Hexr SDK | — |
+| [Envoy Proxy](/platform/envoy-proxy) | mTLS termination, traffic routing, OPA sidecall | 15001 |
+| [A2A Sidecar](/platform/a2a-sidecar) | Agent-to-agent protocol handler | 8090 |
+| [PID Mapper](/platform/pid-mapper) | Per-process identity → SPIRE registration | — |
+
+---
+
+## Cluster Services
+
+| Service | Purpose | Docs |
+|---------|---------|------|
+| [SPIRE](/platform/spire) | SPIFFE identity issuance (X.509 SVIDs) | [→](/platform/spire) |
+| [Auto-Registrar](/platform/auto-registrar) | Watches pods, creates SPIRE registration entries | [→](/platform/auto-registrar) |
+| [Credential Injector](/platform/credential-injector) | SPIFFE → cloud credentials (STS exchange) | [→](/platform/credential-injector) |
+| [Hexr Vault](/platform/vault-service) | Encrypted secret storage (AES-256-GCM) | [→](/platform/vault-service) |
+| [Hexr Gateway](/platform/gateway-service) | Tool registry + credential-injecting proxy | [→](/platform/gateway-service) |
+| [Sandbox Engine](/platform/sandbox) | Firecracker-isolated code execution | [→](/platform/sandbox) |
+| [LLM Guard](/platform/llm-guard) | Prompt/response security scanning | [→](/platform/llm-guard) |
+| [Valkey](/platform/valkey) | In-cluster cache (L2 credentials, A2A tasks) | [→](/platform/valkey) |
+| [OTel Collector](/platform/observability-stack) | Telemetry pipeline (traces, metrics, logs) | [→](/platform/observability-stack) |
+| [Dashboard](/platform/dashboard) | Management UI | [→](/platform/dashboard) |
+| [Cloud API](/platform/cloud-api) | Metering, tenant management, API keys | [→](/platform/cloud-api) |

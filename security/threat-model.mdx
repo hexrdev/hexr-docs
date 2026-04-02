@@ -1,0 +1,81 @@
+---
+title: "Threat Model"
+sidebarTitle: "Threat Model"
+description: "Attack chains specific to AI agent platforms and how Hexr mitigates each one."
+---
+
+## Agent-Specific Threats
+
+AI agents face threats that traditional applications don't:
+
+---
+
+### 1. Prompt Injection → Credential Theft
+
+**Attack:** Adversarial input tricks the LLM into calling `hexr_tool()` with attacker-controlled parameters, exfiltrating data.
+
+**Hexr Mitigation:**
+- **LLM Guard** scans all prompts for injection attempts
+- **OPA policies** restrict which services each role can access
+- **Credential scoping** — even if tricked, the agent can only access its authorized services
+- **Short-lived credentials** — stolen tokens expire in 15 minutes
+
+---
+
+### 2. Tool Confusion → Unauthorized Access
+
+**Attack:** Agent is manipulated into calling the wrong tool or accessing unauthorized resources.
+
+**Hexr Mitigation:**
+- **SPIFFE identity** — OPA verifies the specific process identity, not just the pod
+- **Gateway validation** — tool calls are validated against the agent's registered capabilities
+- **Audit trail** — every tool call is logged with full SPIFFE context
+
+---
+
+### 3. Agent-to-Agent Manipulation
+
+**Attack:** A compromised agent sends malicious tasks to other agents.
+
+**Hexr Mitigation:**
+- **mTLS** — all A2A communication is SPIFFE-authenticated
+- **OPA policies** — controls which agents can communicate
+- **Task validation** — A2A sidecar validates message schema
+
+---
+
+### 4. Secret Exfiltration
+
+**Attack:** Agent code or LLM output leaks stored secrets.
+
+**Hexr Mitigation:**
+- **Vault scoping** — secrets are per-agent, per-role
+- **PII scanner** — LLM Guard catches secrets in LLM output
+- **No env vars** — secrets never in environment variables
+
+---
+
+### 5. Code Execution Escape
+
+**Attack:** LLM-generated code executed by the agent escapes the sandbox.
+
+**Hexr Mitigation:**
+- **Firecracker microVM** — hardware-level isolation
+- **No network** — sandbox has no outbound connectivity
+- **Resource limits** — prevents resource exhaustion
+- **Destroyed after use** — no persistent state
+
+---
+
+## Threat Matrix
+
+| Threat | OWASP GenAI | Hexr Layer | Severity |
+|--------|-------------|-----------|----------|
+| Prompt injection | LLM01 | LLM Guard | Critical |
+| Credential theft | LLM07 | Credential scoping + OPA | Critical |
+| Data exfiltration | LLM06 | PII scanner + vault | High |
+| Agent impersonation | — | SPIFFE mTLS | High |
+| Cross-tenant access | — | Namespace isolation | High |
+| Code execution escape | — | Firecracker sandbox | High |
+| Denial of service | — | OPA rate limiting | Medium |
+| Model manipulation | LLM03 | Separate LLM Guard service | Medium |

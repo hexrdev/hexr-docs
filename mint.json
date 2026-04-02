@@ -1,0 +1,232 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Hexr",
+  "logo": {
+    "dark": "/images/logo-dark.svg",
+    "light": "/images/logo-light.svg"
+  },
+  "favicon": "/images/favicon.svg",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5",
+    "anchors": {
+      "from": "#6366F1",
+      "to": "#8B5CF6"
+    }
+  },
+  "font": {
+    "headings": {
+      "family": "Inter",
+      "weight": 600
+    },
+    "body": {
+      "family": "Inter"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Dashboard",
+      "url": "https://app.hexr.cloud"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get Started",
+    "url": "https://hexr.dev"
+  },
+  "tabs": [
+    {
+      "name": "SDK Reference",
+      "url": "sdk"
+    },
+    {
+      "name": "CLI Reference",
+      "url": "cli"
+    },
+    {
+      "name": "Platform Services",
+      "url": "platform"
+    },
+    {
+      "name": "Guides",
+      "url": "guides"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/hexr-dev"
+    },
+    {
+      "name": "Community",
+      "icon": "discord",
+      "url": "https://discord.gg/hexr"
+    },
+    {
+      "name": "Status",
+      "icon": "signal-bars",
+      "url": "https://status.hexr.dev"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        "introduction",
+        "deployment-models",
+        "architecture/overview"
+      ]
+    },
+    {
+      "group": "Hexr Cloud",
+      "pages": [
+        "cloud/quickstart",
+        "cloud/credits",
+        "cloud/dashboard",
+        "cloud/api-keys"
+      ]
+    },
+    {
+      "group": "Self-Hosted",
+      "pages": [
+        "self-hosted/quickstart",
+        "self-hosted/terraform",
+        "self-hosted/helm",
+        "self-hosted/air-gapped"
+      ]
+    },
+    {
+      "group": "Architecture",
+      "pages": [
+        "architecture/five-layers",
+        "architecture/agent-pod",
+        "architecture/per-process-identity",
+        "architecture/credential-exchange",
+        "architecture/observability"
+      ]
+    },
+    {
+      "group": "Security & Compliance",
+      "pages": [
+        "security/overview",
+        "security/spiffe-identity",
+        "security/opa-policies",
+        "security/threat-model",
+        "security/threat-chains",
+        "security/owasp-genai",
+        "security/compliance-frameworks",
+        "security/compliance"
+      ]
+    },
+    {
+      "group": "SDK Overview",
+      "pages": [
+        "sdk/overview",
+        "sdk/installation"
+      ]
+    },
+    {
+      "group": "Decorators & Functions",
+      "pages": [
+        "sdk/hexr-agent",
+        "sdk/hexr-tool",
+        "sdk/hexr-llm"
+      ]
+    },
+    {
+      "group": "Modules",
+      "pages": [
+        "sdk/vault",
+        "sdk/gateway",
+        "sdk/sandbox",
+        "sdk/browser",
+        "sdk/guard",
+        "sdk/a2a"
+      ]
+    },
+    {
+      "group": "CLI Overview",
+      "pages": [
+        "cli/overview",
+        "cli/installation"
+      ]
+    },
+    {
+      "group": "Commands",
+      "pages": [
+        "cli/build",
+        "cli/push",
+        "cli/deploy",
+        "cli/audit",
+        "cli/login",
+        "cli/status",
+        "cli/cache"
+      ]
+    },
+    {
+      "group": "Platform Overview",
+      "pages": [
+        "platform/overview"
+      ]
+    },
+    {
+      "group": "Pod Containers",
+      "pages": [
+        "platform/pid-mapper",
+        "platform/a2a-sidecar",
+        "platform/envoy-proxy"
+      ]
+    },
+    {
+      "group": "Cluster Services",
+      "pages": [
+        "platform/auto-registrar",
+        "platform/credential-injector",
+        "platform/vault-service",
+        "platform/gateway-service",
+        "platform/sandbox",
+        "platform/llm-guard",
+        "platform/dashboard",
+        "platform/cloud-api"
+      ]
+    },
+    {
+      "group": "Infrastructure",
+      "pages": [
+        "platform/spire",
+        "platform/observability-stack",
+        "platform/valkey"
+      ]
+    },
+    {
+      "group": "Tutorials",
+      "pages": [
+        "guides/quickstart",
+        "guides/multi-framework",
+        "guides/multi-cloud-tools",
+        "guides/agent-to-agent",
+        "guides/llm-observability",
+        "guides/secure-secrets",
+        "guides/code-execution",
+        "guides/browser-agent"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://x.com/hexr_dev",
+    "github": "https://github.com/hexr-dev",
+    "linkedin": "https://linkedin.com/company/hexr"
+  },
+  "analytics": {
+    "posthog": {
+      "apiKey": ""
+    }
+  },
+  "feedback": {
+    "thumbsRating": true
+  },
+  "modeToggle": {
+    "default": "dark"
+  }
+}

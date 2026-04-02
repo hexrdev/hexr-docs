@@ -1,0 +1,212 @@
+---
+title: "hexr.vault"
+sidebarTitle: "Vault"
+description: "SPIFFE-native secrets management. No API keys — your cryptographic identity is the authentication. AES-256-GCM encryption at rest, OPA policy enforcement."
+---
+
+## Quick Start
+
+```python
+import hexr.vault
+
+# Get a secret — authenticated by your SPIFFE identity
+api_key = hexr.vault.get("openai/api-key")
+
+# Store a secret
+hexr.vault.put("my-service/token", "sk-abc123")
+
+# Delete a secret
+hexr.vault.delete("my-service/token")
+```
+
+No API keys, no tokens, no configuration. Your agent's SPIFFE identity is verified automatically.
+
+---
+
+## VaultClient
+
+For more control, use the `VaultClient` class:
+
+```python
+from hexr.vault import VaultClient
+
+# Explicit client with custom settings
+vault = VaultClient(
+    base_url="http://hexr-vault.hexr-system:8091",
+    tenant="acme-corp",
+    timeout=30.0
+)
+```
+
+### Methods
+
+<ParamField path="get(path)" type="method">
+  Get a secret value as a string.
+  
+  ```python
+  value = vault.get("openai/api-key")
+  # Returns: "sk-abc123..."
+  ```
+</ParamField>
+
+<ParamField path="get_secret(path)" type="method">
+  Get a `Secret` object with metadata.
+  
+  ```python
+  secret = vault.get_secret("openai/api-key")
+  print(secret.path)     # "openai/api-key"
+  print(secret.value)    # "sk-abc123..."
+  print(secret.version)  # 3
+  ```
+</ParamField>
+
+<ParamField path="put(path, value, metadata=None)" type="method">
+  Store a secret. Returns the new version number.
+  
+  ```python
+  version = vault.put("my-service/token", "new-value")
+  # Returns: 1 (first version)
+  
+  # With metadata
+  vault.put("db/password", "p@ssw0rd", metadata={"rotation": "90d"})
+  ```
+</ParamField>
+
+<ParamField path="delete(path)" type="method">
+  Delete a secret.
+  
+  ```python
+  vault.delete("my-service/token")
+  ```
+</ParamField>
+
+<ParamField path="list(prefix='')" type="method">
+  List secret paths.
+  
+  ```python
+  paths = vault.list("openai/")
+  # Returns: ["openai/api-key", "openai/org-id"]
+  ```
+</ParamField>
+
+<ParamField path="exists(path)" type="method">
+  Check if a secret exists.
+  
+  ```python
+  if vault.exists("openai/api-key"):
+      key = vault.get("openai/api-key")
+  ```
+</ParamField>
+
+<ParamField path="get_or_default(path, default)" type="method">
+  Get a secret with a fallback value.
+  
+  ```python
+  key = vault.get_or_default("optional/key", "default-value")
+  ```
+</ParamField>
+
+<ParamField path="get_json(path) / put_json(path, value)" type="method">
+  JSON serialization helpers.
+  
+  ```python
+  vault.put_json("config/settings", {"model": "gpt-4o", "temperature": 0.7})
+  config = vault.get_json("config/settings")
+  # Returns: {"model": "gpt-4o", "temperature": 0.7}
+  ```
+</ParamField>
+
+<ParamField path="health()" type="method">
+  Check Vault service health.
+  
+  ```python
+  status = vault.health()
+  # Returns: {"status": "ok", "version": "0.1.1"}
+  ```
+</ParamField>
+
+---
+
+## Decorators
+
+### @secret
+
+Shorthand for fetching a single secret:
+
+```python
+from hexr.vault import secret
+
+@secret("openai/api-key")
+def get_openai_key():
+    pass  # The return value is the secret
+
+key = get_openai_key()  # Returns the secret value
+```
+
+With options:
+```python
+@secret("optional/key", required=False, default="fallback")
+def get_optional():
+    pass
+
+@secret("config/db", as_json=True)
+def get_db_config():
+    pass  # Returns parsed JSON
+```
+
+### @secrets_batch
+
+Fetch multiple secrets at once:
+
+```python
+from hexr.vault import secrets_batch
+
+@secrets_batch("openai/api-key", "anthropic/api-key", "db/password")
+def init_services(**secrets):
+    openai_key = secrets["openai_api_key"]      # path / → _
+    anthropic_key = secrets["anthropic_api_key"]
+    db_pass = secrets["db_password"]
+```
+
+---
+
+## Context Manager
+
+```python
+from hexr.vault import VaultClient
+
+# Auto-cleanup of connections
+with VaultClient() as vault:
+    key = vault.get("openai/api-key")
+    vault.put("results/latest", "processed")
+```
+
+---
+
+## Security Model
+
+| Property | Detail |
+|----------|--------|
+| **Authentication** | SPIFFE X.509-SVID (mutual TLS via Envoy) |
+| **Authorization** | OPA policy at Vault boundary |
+| **Encryption** | AES-256-GCM at rest in PostgreSQL |
+| **Tenant isolation** | OPA enforces: agent A can only see tenant A's secrets |
+| **No API keys** | Your SPIFFE identity = your Vault key |
+| **Audit** | Every access logged with SPIFFE ID and timestamp |
+
+---
+
+## Exceptions
+
+```python
+from hexr.vault import VaultError, SecretNotFoundError, PolicyDeniedError
+
+try:
+    secret = hexr.vault.get("restricted/secret")
+except SecretNotFoundError:
+    print("Secret doesn't exist")
+except PolicyDeniedError:
+    print("OPA policy denied access for your SPIFFE ID")
+except VaultError as e:
+    print(f"Vault error: {e}")
+```

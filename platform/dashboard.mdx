@@ -1,0 +1,52 @@
+---
+title: "Dashboard"
+sidebarTitle: "Dashboard"
+description: "Management UI for monitoring agents, managing tenants, viewing telemetry, and controlling the platform."
+---
+
+## Overview
+
+The Hexr Dashboard is a Next.js web application accessible at `app.hexr.cloud` (Hexr Cloud) or your configured domain (self-hosted).
+
+---
+
+## Pages
+
+| Page | Description |
+|------|-------------|
+| **Overview** | Agent count, active pods, recent activity |
+| **Agents** | List of deployed agents with status, containers, SPIFFE IDs |
+| **Agent Detail** | Per-agent traces, metrics, logs, cost breakdown |
+| **Tenants** | Tenant management (Cloud admin only) |
+| **API Keys** | Generate and manage API keys |
+| **Settings** | Platform configuration, trust domain, cloud provider setup |
+| **Credits** | HCU balance, usage history, top-up (Cloud only) |
+| **Observability** | Embedded Grafana dashboards |
+
+---
+
+## Authentication
+
+| Mode | Method |
+|------|--------|
+| **Hexr Cloud** | Email invitation + approval workflow |
+| **Self-hosted** | Configurable (OIDC, LDAP, basic auth) |
+
+---
+
+## User Roles
+
+| Role | Permissions |
+|------|------------|
+| **Admin** | Full access: manage tenants, approve users, manage API keys |
+| **Member** | View agents, view telemetry, deploy to assigned tenants |
+| **Viewer** | Read-only access to dashboards and agent status |
+
+---
+
+## Access
+
+| Deployment | URL |
+|-----------|-----|
+| Hexr Cloud | [app.hexr.cloud](https://app.hexr.cloud) |
+| Self-hosted | Configured via Helm values |

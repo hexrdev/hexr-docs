@@ -1,0 +1,59 @@
+---
+title: "Credits & Billing"
+sidebarTitle: "Credits"
+description: "Understanding HCU (Hexr Compute Units) — how metering works and what each action costs."
+---
+
+## What Are HCU?
+
+**Hexr Compute Units (HCU)** are the metering currency for Hexr Cloud. Every platform action consumes HCU.
+
+---
+
+## HCU Cost Table
+
+| Event | HCU Cost | Description |
+|-------|----------|-------------|
+| `agent.invocation` | 0.10 | Each time an agent is invoked |
+| `tool.call` | 0.05 | Each `hexr_tool()` call |
+| `llm.call` | 0.15 | Each `hexr_llm()` call |
+| `a2a.message` | 0.05 | Each A2A message sent |
+| `sandbox.exec` | 0.10 | Each sandbox code execution |
+| `browser.browse` | 0.10 | Each browser action |
+| `vault.get` | 0.01 | Each secret retrieval |
+| `vault.put` | 0.01 | Each secret store |
+| `guard.scan` | 0.02 | Each LLM Guard scan |
+
+---
+
+## Example Usage
+
+An agent that:
+- Invokes once (0.10)
+- Makes 5 tool calls (5 × 0.05 = 0.25)
+- Makes 3 LLM calls (3 × 0.15 = 0.45)
+- Sends 2 A2A messages (2 × 0.05 = 0.10)
+
+**Total: 0.90 HCU per run**
+
+---
+
+## Check Balance
+
+```bash
+$ hexr login --status
+
+Credits: 90.9955 HCU remaining
+```
+
+Or via the Dashboard → Credits page.
+
+---
+
+## Usage History
+
+The Dashboard shows:
+- **Daily HCU consumption** graph
+- **Per-agent breakdown** table
+- **Per-event-type** distribution
+- **Export to CSV** for accounting

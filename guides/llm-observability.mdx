@@ -1,0 +1,102 @@
+---
+title: "LLM Observability"
+sidebarTitle: "LLM Observability"
+description: "Track every LLM call — tokens, costs, latency, and content — with zero-config OpenTelemetry instrumentation."
+---
+
+## Zero-Config Tracing
+
+Every `hexr_llm()` call is automatically traced:
+
+```python
+from hexr import hexr_agent, hexr_llm
+
+@hexr_agent(name="my-agent", tenant="acme-corp")
+def main():
+    # This call generates a full OpenTelemetry span automatically
+    response = hexr_llm(
+        provider="openai",
+        model="gpt-4o",
+        prompt="Summarize the latest AI research",
+    )
+```
+
+---
+
+## What Gets Captured
+
+Each LLM span includes:
+
+| Attribute | Example |
+|-----------|---------|
+| `gen_ai.system` | `openai` |
+| `gen_ai.request.model` | `gpt-4o` |
+| `gen_ai.response.model` | `gpt-4o-2024-08-06` |
+| `gen_ai.usage.input_tokens` | `152` |
+| `gen_ai.usage.output_tokens` | `487` |
+| `gen_ai.usage.total_tokens` | `639` |
+| `hexr.agent.name` | `my-agent` |
+| `hexr.agent.tenant` | `acme-corp` |
+| `hexr.agent.role` | `researcher` |
+| `hexr.llm.cost_usd` | `0.0047` |
+| `hexr.llm.duration_ms` | `1234` |
+
+---
+
+## Cost Attribution
+
+Costs are tracked per agent, per role, per model:
+
+```
+Agent: content-crew (tenant: acme-corp)
+├── researcher
+│   ├── gpt-4o:      $2.34 (1,247 calls)
+│   └── claude-3.5:  $1.12 (423 calls)
+├── writer
+│   ├── gpt-4o:      $3.67 (2,100 calls)
+│   └── gpt-4o-mini: $0.23 (890 calls)
+└── editor
+    └── gpt-4o:      $0.89 (312 calls)
+
+Total: $8.25 / 4,972 calls
+```
+
+---
+
+## Grafana Dashboard
+
+The LLM Costs dashboard shows:
+
+- **Token usage** over time (input vs. output)
+- **Cost per tenant** (bar chart)
+- **Model distribution** (pie chart)
+- **Latency percentiles** (p50, p95, p99)
+- **Error rate** by provider
+
+---
+
+## GenAI Semantic Conventions
+
+Hexr follows the [OpenTelemetry GenAI Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/), ensuring compatibility with any OpenTelemetry-compatible backend (Datadog, New Relic, Honeycomb, Grafana Cloud).
+
+---
+
+## Multi-Provider Comparison
+
+Track the same prompt across different providers:
+
+```python
+providers = [
+    ("openai", "gpt-4o"),
+    ("anthropic", "claude-sonnet-4-20250514"),
+    ("google", "gemini-1.5-pro"),
+]
+
+for provider, model in providers:
+    response = hexr_llm(
+        provider=provider,
+        model=model,
+        prompt="Explain quantum computing in one paragraph",
+    )
+    # Each call traced separately — compare cost/latency in Grafana
+```

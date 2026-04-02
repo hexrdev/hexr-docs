@@ -1,0 +1,100 @@
+---
+title: "hexr deploy"
+sidebarTitle: "hexr deploy"
+description: "Deploy your agent to a Kubernetes cluster. Applies generated manifests, waits for pod readiness, and confirms identity establishment."
+---
+
+## Usage
+
+```bash
+hexr deploy [build_dir] [options]
+```
+
+<ParamField path="build_dir" type="path" default=".hexr">
+  Path to the build directory containing generated manifests.
+</ParamField>
+
+---
+
+## Interactive Flow
+
+```bash
+$ hexr deploy
+
+Detected Kubernetes clusters:
+  1. hexr-cloud (GKE, us-central1-a, hexr-cloud-prod)
+  2. do-nyc1-hexr-demo (DigitalOcean, nyc1)
+
+Select cluster [1]: 1
+
+Applying manifests to tenant-acme-corp...
+  ✓ Namespace: tenant-acme-corp (created)
+  ✓ ServiceAccount + RBAC (applied)
+  ✓ Process context ConfigMaps (3 created)
+  ✓ Agent Card ConfigMap (created)
+  ✓ Agent Pod (created)
+
+Waiting for pod readiness...
+  acme-research-analyst:
+    ├── init: install-hexr-sdk ✓
+    ├── agent ✓
+    ├── envoy-sidecar ✓
+    ├── a2a-sidecar ✓
+    └── pid-mapper ✓
+  
+  4/4 containers running
+
+✓ Agent deployed successfully
+  Namespace: tenant-acme-corp
+  Pod: acme-research-analyst
+  SPIFFE ID: spiffe://hexr.cloud/agent/acme-corp/research-analyst/main
+  A2A Endpoint: http://research-analyst-a2a.tenant-acme-corp.svc:8090
+```
+
+---
+
+## What Gets Applied
+
+The deploy command applies these Kubernetes manifests in order:
+
+1. `namespace.yaml` — `tenant-{name}` namespace
+2. `rbac.yaml` — ServiceAccount, Role, RoleBinding
+3. `process-contexts/*.json` → ConfigMaps
+4. `agent-card.yaml` — Agent Card ConfigMap (if A2A enabled)
+5. `agent-pod.yaml` — Pod with 4 containers + init container
+
+---
+
+## Cloud Deploy
+
+For Hexr Cloud users:
+
+```bash
+$ hexr deploy --cloud
+
+Deploying to Hexr Cloud...
+  Cluster: hexr-cloud (GKE)
+  Namespace: tenant-acme-corp (auto-provisioned)
+  
+  ✓ Agent deployed
+  ✓ Dashboard: https://app.hexr.cloud/dashboard/agents
+```
+
+---
+
+## Verify Deployment
+
+After deploying, verify with:
+
+```bash
+$ hexr status
+
+Deployed Agents (tenant-acme-corp):
+┌─────────────────────────┬─────────┬────────────┬──────────────┐
+│ Agent                   │ Status  │ Containers │ Age          │
+├─────────────────────────┼─────────┼────────────┼──────────────┤
+│ research-analyst        │ Running │ 4/4        │ 2m           │
+│ content-crew            │ Running │ 4/4        │ 1d           │
+│ financial-analysis      │ Running │ 4/4        │ 3d           │
+└─────────────────────────┴─────────┴────────────┴──────────────┘
+```

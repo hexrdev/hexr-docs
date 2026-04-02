@@ -1,0 +1,59 @@
+---
+title: "Valkey"
+sidebarTitle: "Valkey"
+description: "In-cluster cache for L2 credentials, A2A task state, and tool registry data."
+---
+
+## What It Does
+
+Valkey (Redis-compatible) serves as the shared in-cluster cache:
+
+| Usage | Description |
+|-------|-------------|
+| **L2 credential cache** | Cached cloud credentials shared across pods |
+| **A2A task state** | Task status and results for agent-to-agent communication |
+| **Tool registry** | Cached tool definitions from the Gateway |
+| **Rate limiting** | Per-tenant and per-agent rate limit counters |
+
+---
+
+## Why Valkey
+
+Valkey is the open-source fork of Redis (post-license change). It is:
+- 100% Redis protocol compatible
+- Apache 2.0 licensed
+- Drop-in replacement with no code changes
+
+---
+
+## Configuration
+
+Deployed as a single-instance StatefulSet in `hexr-system`:
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: valkey
+  namespace: hexr-system
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: valkey
+          image: valkey/valkey:8
+          ports:
+            - containerPort: 6379
+          args:
+            - "--maxmemory"
+            - "256mb"
+            - "--maxmemory-policy"
+            - "allkeys-lru"
+```
+
+---
+
+## Access
+
+All platform services connect to `valkey.hexr-system.svc:6379`. No authentication is required within the cluster (mTLS provides service-level auth).

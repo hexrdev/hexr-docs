@@ -1,0 +1,69 @@
+---
+title: "Cloud API"
+sidebarTitle: "Cloud API"
+description: "Metering, tenant management, API key issuance, and usage tracking for Hexr Cloud."
+---
+
+## What It Does
+
+The Cloud API is the control plane for Hexr Cloud. It handles:
+
+- **Tenant management** — create, configure, and manage tenants
+- **API key issuance** — generate and validate `hxr_live_*` keys
+- **Metering** — track HCU consumption per agent, tool, and LLM call
+- **User management** — invite, approve, and manage team members
+- **Credit management** — balance tracking and usage history
+
+---
+
+## Metering (HCU)
+
+Every platform action consumes **Hexr Compute Units (HCU)**:
+
+| Event | HCU Cost |
+|-------|----------|
+| `agent.invocation` | 0.10 |
+| `tool.call` | 0.05 |
+| `llm.call` | 0.15 |
+| `a2a.message` | 0.05 |
+| `sandbox.exec` | 0.10 |
+| `browser.browse` | 0.10 |
+| `vault.get` | 0.01 |
+| `vault.put` | 0.01 |
+| `guard.scan` | 0.02 |
+
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/tenants` | List tenants |
+| `POST` | `/api/v1/tenants` | Create tenant |
+| `GET` | `/api/v1/tenants/:id/usage` | Get tenant usage |
+| `GET` | `/api/v1/tenants/:id/credits` | Get credit balance |
+| `POST` | `/api/v1/api-keys` | Generate API key |
+| `GET` | `/api/v1/api-keys` | List API keys |
+| `DELETE` | `/api/v1/api-keys/:id` | Revoke API key |
+| `POST` | `/api/v1/users/invite` | Invite user |
+| `POST` | `/api/v1/users/:id/approve` | Approve user |
+| `GET` | `/api/v1/metering/events` | Query metering events |
+| `GET` | `/health` | Health check |
+
+---
+
+## Authentication
+
+All Cloud API endpoints require an API key:
+
+```bash
+curl -H "Authorization: Bearer hxr_live_..." https://api.hexr.cloud/api/v1/tenants
+```
+
+---
+
+## Image
+
+```
+us-central1-docker.pkg.dev/hexr-cloud-prod/hexr-images/cloud-api:v0.8.0
+```

@@ -1,0 +1,106 @@
+---
+title: "Terraform Setup"
+sidebarTitle: "Terraform"
+description: "Deploy Hexr infrastructure on AWS, GCP, or Azure using Terraform modules."
+---
+
+## Overview
+
+Hexr provides Terraform modules for provisioning the underlying infrastructure:
+
+- Kubernetes cluster (GKE / EKS / AKS)
+- PostgreSQL database
+- Container registry
+- Networking (VPC, subnets, firewall rules)
+- Cloud provider IAM for SPIFFE federation
+
+---
+
+## GCP (Google Cloud)
+
+```hcl
+module "hexr_gcp" {
+  source = "github.com/hexr-dev/terraform-hexr-gcp"
+
+  project_id   = "your-project"
+  region       = "us-central1"
+  cluster_name = "hexr-cluster"
+  
+  # Database
+  database_tier    = "db-custom-2-8192"
+  database_version = "POSTGRES_14"
+  
+  # SPIRE OIDC
+  oidc_hostname = "oidc.your-domain.com"
+  
+  # Workload Identity Federation
+  trust_domain = "your-company.internal"
+}
+```
+
+---
+
+## AWS
+
+```hcl
+module "hexr_aws" {
+  source = "github.com/hexr-dev/terraform-hexr-aws"
+
+  region       = "us-east-1"
+  cluster_name = "hexr-cluster"
+  
+  # Database
+  rds_instance_class = "db.r6g.large"
+  
+  # SPIRE OIDC Federation
+  oidc_hostname = "oidc.your-domain.com"
+  trust_domain  = "your-company.internal"
+}
+```
+
+---
+
+## Azure
+
+```hcl
+module "hexr_azure" {
+  source = "github.com/hexr-dev/terraform-hexr-azure"
+
+  location           = "eastus"
+  resource_group     = "hexr-rg"
+  cluster_name       = "hexr-cluster"
+  
+  # Database
+  postgres_sku_name = "GP_Standard_D2s_v3"
+  
+  # Federated Identity
+  trust_domain = "your-company.internal"
+}
+```
+
+---
+
+## What Gets Provisioned
+
+| Resource | GCP | AWS | Azure |
+|----------|-----|-----|-------|
+| Kubernetes | GKE Autopilot | EKS | AKS |
+| Database | Cloud SQL | RDS | Azure DB for PostgreSQL |
+| Registry | Artifact Registry | ECR | ACR |
+| Network | VPC + Subnets | VPC + Subnets | VNet + Subnets |
+| IAM | Workload Identity | IRSA | Managed Identity |
+| DNS | Cloud DNS | Route 53 | Azure DNS |
+
+---
+
+## After Terraform
+
+Once infrastructure is provisioned:
+
+```bash
+# Connect to the cluster
+gcloud container clusters get-credentials hexr-cluster --region us-central1
+
+# Install Hexr via Helm
+helm install hexr-runtime hexr/hexr-runtime -n hexr-system -f values.yaml
+```

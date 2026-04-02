@@ -1,0 +1,190 @@
+---
+title: "hexr.browser"
+sidebarTitle: "Browser"
+description: "Headless Chromium browser running inside a Firecracker microVM. Navigate, click, type, screenshot, and extract text — all hardware-isolated."
+---
+
+## Quick Start
+
+```python
+import hexr.browser
+
+result = hexr.browser.browse(
+    "https://news.ycombinator.com",
+    actions=[
+        {"type": "extract_text", "selector": ".titleline > a"}
+    ]
+)
+
+print(f"Page title: {result.title}")
+for item in result.action_results:
+    print(item)
+```
+
+---
+
+## API
+
+### hexr.browser.browse()
+
+```python
+hexr.browser.browse(
+    url: str,
+    *,
+    actions: list[dict] = None,
+    timeout: int = 60,
+    viewport_width: int = 1280,
+    viewport_height: int = 720
+) -> BrowseResult
+```
+
+<ParamField path="url" type="string" required>
+  The URL to navigate to.
+</ParamField>
+
+<ParamField path="actions" type="list[dict]" default="None">
+  Sequence of browser actions to perform after initial page load.
+</ParamField>
+
+<ParamField path="timeout" type="int" default="60">
+  Maximum total execution time in seconds.
+</ParamField>
+
+<ParamField path="viewport_width" type="int" default="1280">
+  Browser viewport width in pixels.
+</ParamField>
+
+<ParamField path="viewport_height" type="int" default="720">
+  Browser viewport height in pixels.
+</ParamField>
+
+### BrowseResult
+
+```python
+result.url              # Final URL after any redirects
+result.title            # Page title
+result.text             # Full page text content
+result.screenshot       # Base64-encoded PNG screenshot
+result.action_results   # Results from each action
+result.duration_ms      # Total execution time
+```
+
+---
+
+## Actions
+
+| Action Type | Fields | Description |
+|-------------|--------|-------------|
+| `navigate` | `value` (URL) | Navigate to a new URL |
+| `click` | `selector` | Click an element |
+| `type` | `selector`, `value` | Type text into an input |
+| `screenshot` | — | Capture full-page screenshot |
+| `extract_text` | `selector` | Extract text from elements |
+| `wait` | `timeout` (ms) | Wait for a duration |
+| `scroll` | `value` (pixels) | Scroll the page |
+
+---
+
+## Examples
+
+### Web Research Agent
+
+```python
+from hexr import hexr_agent, hexr_llm
+import hexr.browser
+import openai
+
+@hexr_agent(name="web-researcher", tenant="acme-corp")
+def research(topic: str) -> str:
+    # Browse and extract content
+    result = hexr.browser.browse(
+        f"https://en.wikipedia.org/wiki/{topic}",
+        actions=[
+            {"type": "extract_text", "selector": "#mw-content-text p"}
+        ]
+    )
+    
+    # Analyze with LLM
+    client = hexr_llm(openai.OpenAI())
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "Summarize the following content"},
+            {"role": "user", "content": result.text[:4000]}
+        ]
+    )
+    
+    return response.choices[0].message.content
+```
+
+### Form Submission
+
+```python
+result = hexr.browser.browse(
+    "https://example.com/login",
+    actions=[
+        {"type": "type", "selector": "#username", "value": "agent@hexr.dev"},
+        {"type": "type", "selector": "#password", "value": "token-from-vault"},
+        {"type": "click", "selector": "#submit"},
+        {"type": "wait", "timeout": 3000},
+        {"type": "screenshot"},
+        {"type": "extract_text", "selector": ".dashboard-content"}
+    ]
+)
+
+# Screenshot is base64-encoded PNG
+import base64
+with open("screenshot.png", "wb") as f:
+    f.write(base64.b64decode(result.screenshot))
+```
+
+### Visual Analysis with GPT-4o
+
+```python
+result = hexr.browser.browse(
+    "https://dashboard.example.com",
+    actions=[{"type": "screenshot"}]
+)
+
+client = hexr_llm(openai.OpenAI())
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Describe what you see in this dashboard"},
+            {"type": "image_url", "image_url": {
+                "url": f"data:image/png;base64,{result.screenshot}"
+            }}
+        ]
+    }]
+)
+```
+
+---
+
+## Async Version
+
+```python
+result = await hexr.browser.browse_async(
+    "https://example.com",
+    actions=[{"type": "screenshot"}]
+)
+```
+
+---
+
+## Security Model
+
+Same as [Sandbox](/sdk/sandbox) — runs inside a Firecracker microVM:
+
+- **No SPIFFE identity** inside the browser VM
+- **No credential access** — can't call cloud APIs
+- **No cluster network** — can't reach Vault, Gateway, or other agents
+- **Fresh VM per request** — no persistent state or cookies
+- **Hardware isolation** — KVM boundary, not just a container
+
+<Info>
+  This is a **Browserbase-style** managed browser, not Cloudflare Browser Rendering. 
+  It runs on your own infrastructure (Kubernetes + Firecracker) with full isolation.
+</Info>

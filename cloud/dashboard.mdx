@@ -1,0 +1,60 @@
+---
+title: "Dashboard Guide"
+sidebarTitle: "Dashboard"
+description: "Navigate the Hexr Cloud dashboard — manage agents, monitor telemetry, and control your tenant."
+---
+
+## Access
+
+Open [app.hexr.cloud](https://app.hexr.cloud) and log in with your credentials.
+
+---
+
+## Pages
+
+### Overview
+
+The home page shows:
+- Active agent count
+- Total invocations (24h)
+- HCU consumed (24h)
+- Recent activity feed
+
+### Agents
+
+List of all deployed agents with:
+- Pod name and status (Running/Pending/Failed)
+- Container count (e.g., 4/4)
+- Age
+- SPIFFE ID
+- Quick actions (logs, restart, delete)
+
+### Agent Detail
+
+Click any agent for deep-dive view:
+- **Traces** — OpenTelemetry trace list with duration, status
+- **Metrics** — Invocation count, latency percentiles, error rate
+- **LLM** — Token usage, cost by model, provider distribution
+- **Tools** — Tool call frequency, latency, cache hit rate
+- **Logs** — Structured logs from the agent container
+
+### API Keys
+
+- Generate new API keys (`hxr_live_*` format)
+- View active keys (masked)
+- Revoke keys
+- Set key permissions (admin/deploy/read-only)
+
+### Settings
+
+- Tenant name and ID
+- Trust domain configuration
+- Cloud provider setup (AWS, GCP, Azure role ARNs)
+- Webhook configuration
+- Theme (dark/light)
+
+### Team
+
+- Invite team members via email
+- Admin approval workflow
+- Role assignment (Admin/Member/Viewer)

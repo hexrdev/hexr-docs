@@ -1,0 +1,169 @@
+---
+title: "hexr build"
+sidebarTitle: "hexr build"
+description: "Analyze your Python agent with AST-based discovery. Generates Dockerfile, Kubernetes manifests, SPIFFE process contexts, and A2A artifacts."
+---
+
+## Usage
+
+```bash
+hexr build <agent_file> --tenant <tenant> [options]
+```
+
+---
+
+## Arguments
+
+<ParamField path="agent_file" type="path" required>
+  Path to your Python agent file.
+  
+  ```bash
+  hexr build my_agent.py --tenant acme-corp
+  hexr build agents/content_crew.py --tenant acme-corp
+  ```
+</ParamField>
+
+---
+
+## Options
+
+<ParamField path="--tenant, -t" type="string" required>
+  Tenant identifier. Maps to Kubernetes namespace `tenant-{tenant}`.
+</ParamField>
+
+<ParamField path="--name, -n" type="string">
+  Override the agent name (default: extracted from `@hexr_agent(name=...)` or filename).
+</ParamField>
+
+<ParamField path="--target" type="string" default="development">
+  Target environment: `development`, `staging`, or `production`.
+  
+  Affects OPA policies, resource limits, and security scanning levels.
+</ParamField>
+
+<ParamField path="--registry" type="string">
+  Container registry base URL.
+  
+  ```bash
+  hexr build agent.py -t acme --registry us-central1-docker.pkg.dev/my-project/images
+  ```
+</ParamField>
+
+<ParamField path="--pypi-url" type="string">
+  Private PyPI URL for SDK installation in agent pods.
+  
+  Default: `https://pypi.hexr.cloud/simple/`
+</ParamField>
+
+<ParamField path="--python-version" type="string" default="3.11">
+  Python version for the container.
+</ParamField>
+
+<ParamField path="--base-image" type="string" default="python:3.11-slim">
+  Base Docker image.
+</ParamField>
+
+<ParamField path="--multi-cloud" type="string">
+  Comma-separated cloud providers for credential exchange.
+  
+  ```bash
+  hexr build agent.py -t acme --multi-cloud aws,gcp,azure
+  ```
+</ParamField>
+
+<ParamField path="--subprocess-support" type="flag">
+  Enable subprocess role management for multi-process agents.
+</ParamField>
+
+<ParamField path="--security-scan" type="flag">
+  Enable security scanning during build (dependency audit).
+</ParamField>
+
+<ParamField path="--output-dir, -o" type="path" default=".hexr">
+  Output directory for generated artifacts.
+</ParamField>
+
+<ParamField path="--dockerfile-only" type="flag">
+  Generate manifests only — skip container image build.
+</ParamField>
+
+<ParamField path="--dry-run" type="flag">
+  Show what would be generated without creating files.
+</ParamField>
+
+<ParamField path="--trust-domain" type="string" default="demo.hexr.dev">
+  SPIFFE trust domain for identity generation.
+</ParamField>
+
+---
+
+## What Gets Generated
+
+```
+.hexr/
+├── Dockerfile                    # Multi-stage build with SDK injection
+├── requirements.txt              # Auto-detected from imports
+├── agent-pod.yaml                # Pod spec with 4 containers
+├── namespace.yaml                # tenant-{name} namespace
+├── rbac.yaml                     # ServiceAccount + RoleBindings
+├── agent-card.yaml               # ConfigMap for A2A discovery
+├── process-contexts/             # Per-process SPIFFE context
+│   ├── researcher.json
+│   ├── writer.json
+│   └── editor.json
+└── hexr-manifest.json            # Build metadata
+```
+
+---
+
+## AST Analysis
+
+The build command performs ~2,900 lines of AST analysis to:
+
+1. **Detect the framework** — CrewAI, LangChain, AutoGen, Strands, Swarm, or pure Python
+2. **Discover agents** — Find all `@hexr_agent` decorators and framework-specific agent declarations
+3. **Map sub-agents** — Identify roles (researcher, writer, editor) for per-process identity
+4. **Infer resources** — Detect `hexr_tool()` calls to determine required cloud permissions
+5. **Detect A2A** — Find `A2AClient` usage and `a2a=True` parameters
+6. **Build coordination graph** — NetworkX analysis of agent relationships
+
+---
+
+## Examples
+
+### Basic Agent
+
+```bash
+$ hexr build research_agent.py --tenant acme-corp
+
+Analyzing research_agent.py...
+  Framework: pure_python
+  Agents: 1 (research-agent)
+  Resources: aws_s3
+  A2A: disabled
+
+Generated .hexr/ (5 files)
+```
+
+### CrewAI with A2A
+
+```bash
+$ hexr build content_crew.py --tenant acme-corp --multi-cloud aws,gcp
+
+Analyzing content_crew.py...
+  Framework: crewai
+  Agents: 3 (researcher, writer, editor)
+  Resources: aws_s3, gcp_bigquery
+  A2A: enabled
+  Subprocess support: auto-detected
+
+Generated .hexr/ (8 files, 3 process contexts)
+```
+
+### Production Build
+
+```bash
+$ hexr build agent.py -t acme --target production --security-scan \
+    --registry us-central1-docker.pkg.dev/hexr-prod/images \
+    --trust-domain hexr.cloud
+```
