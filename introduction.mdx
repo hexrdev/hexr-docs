@@ -5,48 +5,38 @@ description: "The identity-first runtime platform for AI agents. Deploy secure, 
 ---
 
 ```mermaid
-%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#6366F1', 'primaryTextColor': '#fff', 'primaryBorderColor': '#818CF8', 'lineColor': '#818CF8', 'secondaryColor': '#1E1B4B', 'tertiaryColor': '#312E81'}}}%%
-graph TB
-    subgraph L4["<b>LAYER 4 · Developer Experience</b>"]
-        direction LR
-        CLI["hexr build / push / deploy"]
-        SDK["@hexr_agent decorator"]
-        DASH["Dashboard · Identity Graph"]
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#6366F1', 'primaryTextColor': '#E0E7FF', 'primaryBorderColor': '#818CF8', 'lineColor': '#A5B4FC', 'secondaryColor': '#1E1B4B', 'tertiaryColor': '#312E81', 'fontSize': '14px'}}}%%
+flowchart LR
+    CODE["<b>Your Code</b>\n@hexr_agent\n+ any framework"]
+    
+    BUILD["<b>hexr build</b>\nAST discovery\nDockerfile gen\nsidecar injection"]
+    
+    DEPLOY["<b>hexr deploy</b>\nK8s scheduling\nauto-registration"]
+
+    subgraph RUNTIME["What Hexr gives you — automatically"]
+        direction TB
+        ID["🔐 Cryptographic Identity\nSPIFFE X.509 per process"]
+        CREDS["🔑 Cloud Credentials\nAWS · GCP · Azure\nzero secrets in code"]
+        MESH["🔒 mTLS Mesh\nEnvoy sidecar\nzero-trust networking"]
+        OBS["📊 Full Observability\ntraces · metrics · costs\nper agent, per LLM call"]
+        TOOLS["🔧 Secure Tool Access\nVault · Gateway · Sandbox\nOPA policy enforcement"]
+        COMM["📡 Agent-to-Agent\nA2A protocol\ntask lifecycle · streaming"]
     end
 
-    subgraph L3["<b>LAYER 3 · Platform Services</b>"]
-        direction LR
-        VAULT["Hexr Vault"]
-        GW["Hexr Gateway"]
-        A2A["A2A Protocol"]
-        CI["Credential Injector"]
-        SB["Sandbox · LLM Guard"]
-    end
+    CODE -->|"one decorator"| BUILD
+    BUILD -->|"one command"| DEPLOY
+    DEPLOY --> RUNTIME
 
-    subgraph L2["<b>LAYER 2 · Observability</b>"]
-        direction LR
-        OTEL["OTel Collector"]
-        PROM["Prometheus"]
-        JAEG["Jaeger"]
-        GRAF["Grafana"]
-    end
-
-    subgraph L1["<b>LAYER 1 · Identity Foundation</b>"]
-        direction LR
-        SPIRES["SPIRE Server"]
-        SPIREA["SPIRE Agent"]
-        OIDC["OIDC Provider"]
-        FED["Federation"]
-    end
-
-    L4 --> L3
-    L3 --> L2
-    L2 --> L1
-
-    style L4 fill:#4F46E5,stroke:#818CF8,stroke-width:2px,color:#E0E7FF
-    style L3 fill:#6366F1,stroke:#A5B4FC,stroke-width:2px,color:#E0E7FF
-    style L2 fill:#7C3AED,stroke:#C4B5FD,stroke-width:2px,color:#E0E7FF
-    style L1 fill:#8B5CF6,stroke:#DDD6FE,stroke-width:2px,color:#E0E7FF
+    style CODE fill:#4F46E5,stroke:#818CF8,stroke-width:2px,color:#E0E7FF
+    style BUILD fill:#6366F1,stroke:#A5B4FC,stroke-width:2px,color:#E0E7FF
+    style DEPLOY fill:#7C3AED,stroke:#C4B5FD,stroke-width:2px,color:#E0E7FF
+    style RUNTIME fill:#1E1B4B,stroke:#6366F1,stroke-width:2px,color:#E0E7FF
+    style ID fill:#312E81,stroke:#818CF8,color:#E0E7FF
+    style CREDS fill:#312E81,stroke:#818CF8,color:#E0E7FF
+    style MESH fill:#312E81,stroke:#818CF8,color:#E0E7FF
+    style OBS fill:#312E81,stroke:#818CF8,color:#E0E7FF
+    style TOOLS fill:#312E81,stroke:#818CF8,color:#E0E7FF
+    style COMM fill:#312E81,stroke:#818CF8,color:#E0E7FF
 ```
 
 ## Choose Your Deployment Model
