@@ -86,6 +86,19 @@ def analyze(topic: str):
 | `hexr.browser.browse` | `url`, `actions_count` | `hexr.browser` |
 | `hexr.guard.scan` | `scan_type` (prompt/output), `is_valid` | `hexr.guard` |
 
+#### LLM Guard Span Attributes
+
+When LLM Guard blocks a prompt or response, additional attributes are set on the parent `hexr.llm.chat` span:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `hexr.guard.prompt_blocked` | `bool` | `true` if the input prompt was blocked |
+| `hexr.guard.scanners` | `string` | Scanner results that triggered the prompt block |
+| `hexr.guard.output_blocked` | `bool` | `true` if the LLM response was blocked |
+| `hexr.guard.output_scanners` | `string` | Scanner results that triggered the output block |
+
+Blocked requests set the span status to `ERROR` with `"Blocked by LLM Guard"` or `"Output blocked by LLM Guard"`.
+
 ---
 
 ## Metrics
@@ -128,6 +141,14 @@ def analyze(topic: str):
 | `hexr.a2a.send_failures` | Counter | Failed sends |
 | `hexr.a2a.send.duration` | Histogram | Send latency |
 | `hexr.a2a.bridge.executions` | Counter | Bridge handler calls |
+
+### LLM Guard Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `hexr_guard_scans_total` | Counter | Total scans by direction (`input`/`output`) and scanner |
+| `hexr_guard_blocks_total` | Counter | Total blocks by direction and scanner |
+| `hexr_guard_scan_duration_seconds` | Histogram | Scan latency by direction |
 
 ---
 
