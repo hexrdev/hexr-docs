@@ -62,7 +62,6 @@
             "pages": [
               "self-hosted/quickstart",
               "self-hosted/terraform",
-              "self-hosted/helm",
               "self-hosted/air-gapped"
             ]
           },
