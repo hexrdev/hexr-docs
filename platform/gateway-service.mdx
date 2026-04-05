@@ -55,7 +55,7 @@ sequenceDiagram
     participant CI as Credential Injector
     participant API as External API
 
-    Agent->>GW: hexr_tool("aws_s3", action="list_buckets")
+    Agent->>GW: hexr_tool("aws_s3") → s3.list_buckets()
     GW->>GW: Resolve "aws_s3" → S3 endpoint
     GW->>CI: Exchange SPIFFE → AWS credentials
     CI-->>GW: Temporary AWS creds

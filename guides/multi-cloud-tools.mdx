@@ -26,17 +26,18 @@ from hexr import hexr_agent, hexr_tool
 @hexr_agent(name="multi-cloud-agent", tenant="acme-corp")
 def main():
     # AWS — automatic STS credential exchange
-    s3_data = hexr_tool("aws_s3", action="get_object",
-                        bucket="reports", key="sales.csv")
+    s3 = hexr_tool("aws_s3")
+    obj = s3.get_object(Bucket="reports", Key="sales.csv")
+    s3_data = obj["Body"].read()
 
     # GCP — automatic Workload Identity Federation
-    bq_data = hexr_tool("gcp_bigquery", 
-                        query="SELECT * FROM dataset.table LIMIT 10")
+    bq = hexr_tool("gcp_bigquery")
+    bq_data = bq.query("SELECT * FROM dataset.table LIMIT 10")
 
     # Azure — automatic federated identity
-    blob = hexr_tool("azure_storage",
-                     action="download_blob",
-                     container="data", blob="report.pdf")
+    blob_client = hexr_tool("azure_storage")
+    blob = blob_client.get_blob_client(container="data", blob="report.pdf")
+    blob_data = blob.download_blob().readall()
 ```
 
 **Zero credentials in your code.** The platform exchanges your agent's SPIFFE identity for short-lived cloud tokens automatically.

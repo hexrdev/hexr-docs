@@ -20,17 +20,38 @@ You bring your agent code — we handle everything else.
 
 ## 1. Get Access
 
-Sign up at [hexr.dev](https://hexr.dev) and request early access. Once approved:
+<Tabs>
+  <Tab title="Via Dashboard">
+    1. Go to [app.hexr.cloud/onboard](https://app.hexr.cloud/onboard)
+    2. Enter your **organization name**, **email**, and **invite code**
+    3. Click **Create Account**
+    4. **Save your API key** — it's shown only once (`hxr_live_...`)
+  </Tab>
+  <Tab title="Via CLI">
+    ```bash
+    curl -s -X POST \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "your-org-name",
+        "contact_email": "you@example.com",
+        "invite_code": "YOUR_INVITE_CODE"
+      }' \
+      https://api.hexr.cloud/v1/tenants/onboard | python3 -m json.tool
+    ```
+    Save the `api_key` from the response.
+  </Tab>
+</Tabs>
 
-1. You'll receive an email invitation
-2. Log in at [app.hexr.cloud](https://app.hexr.cloud)
-3. Generate an API key from the Dashboard → API Keys page
+<Info>
+  Don't have an invite code? Request early access at [hexr.dev](https://hexr.dev).
+</Info>
 
 ---
 
-## 2. Authenticate the CLI
+## 2. Install and Authenticate
 
 ```bash
+pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
 hexr login --key hxr_live_your_api_key_here
 ```
 
@@ -43,10 +64,10 @@ hexr login --key hxr_live_your_api_key_here
 hexr build my_agent.py --tenant your-tenant
 
 # Build and push (uses Google Cloud Build — no local Docker needed)
-hexr push --cloud
+hexr push --cloud --tenant your-tenant
 
 # Deploy to Hexr Cloud
-hexr deploy --cloud
+hexr deploy .hexr --cloud
 ```
 
 ---

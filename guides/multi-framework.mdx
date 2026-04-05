@@ -80,8 +80,8 @@ def main():
     tools = [
         Tool(
             name="S3 Lookup",
-            func=lambda q: hexr_tool("aws_s3", action="get_object", 
-                                      bucket="data", key=q),
+            func=lambda q: hexr_tool("aws_s3").get_object(
+                Bucket="data", Key=q)["Body"].read().decode(),
             description="Look up data in S3",
         ),
     ]

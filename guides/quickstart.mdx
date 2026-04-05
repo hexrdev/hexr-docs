@@ -16,11 +16,11 @@ description: "Deploy your first AI agent with Hexr in under 5 minutes."
 
 <CodeGroup>
 ```bash uv (recommended)
-uv pip install hexr --index-url https://pypi.hexr.cloud/simple/
+uv pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
 ```
 
 ```bash pip
-pip install hexr --index-url https://pypi.hexr.cloud/simple/
+pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
 ```
 </CodeGroup>
 
@@ -31,26 +31,29 @@ pip install hexr --index-url https://pypi.hexr.cloud/simple/
 Create `my_agent.py`:
 
 ```python
+import openai
 from hexr import hexr_agent, hexr_tool, hexr_llm
+from hexr.vault import VaultClient
 
 @hexr_agent(name="my-first-agent", tenant="my-team")
 def main():
-    # Store a secret (one-time setup)
-    from hexr.vault import VaultClient
+    # Fetch API key from Hexr Vault (no secrets in code)
     vault = VaultClient()
-    vault.put("OPENAI_API_KEY", "sk-...")
+    api_key = vault.get("api-keys/openai")
 
-    # Call an LLM with automatic telemetry
-    response = hexr_llm(
-        provider="openai",
+    # Wrap the OpenAI client — automatic OTel tracing on every call
+    client = hexr_llm(openai.OpenAI(api_key=api_key))
+
+    response = client.chat.completions.create(
         model="gpt-4o",
-        prompt="What is the capital of France?",
+        messages=[{"role": "user", "content": "What is the capital of France?"}],
     )
-    print(response)
+    print(response.choices[0].message.content)
 
-    # Use a cloud tool with automatic credential injection
-    result = hexr_tool("aws_s3", action="list_buckets")
-    print(f"Found {len(result['Buckets'])} buckets")
+    # Get an authenticated S3 client via SPIFFE identity (no AWS keys)
+    s3 = hexr_tool("aws_s3")
+    buckets = s3.list_buckets()
+    print(f"Found {len(buckets['Buckets'])} buckets")
 
 if __name__ == "__main__":
     main()
