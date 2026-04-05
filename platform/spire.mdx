@@ -22,20 +22,26 @@ SPIRE (SPIFFE Runtime Environment) is the **identity foundation** of Hexr. It is
 
 ## Identity Issuance Flow
 
-```mermaid
-sequenceDiagram
-    participant Pod as Agent Pod
-    participant PID as PID Mapper
-    participant Agent as SPIRE Agent
-    participant Server as SPIRE Server
+<Steps>
+  <Step title="Process starts in agent pod">
+    A new process spawns (e.g., PID 42 with role `researcher`). The PID Mapper detects it.
+  </Step>
+  <Step title="PID Mapper requests SVID">
+    PID Mapper calls the SPIRE Agent's Workload API (`FetchX509SVID`) with the process selectors.
+  </Step>
+  <Step title="SPIRE Agent performs attestation">
+    The agent verifies workload identity using Kubernetes selectors: `k8s:pod-uid`, `k8s:ns`, `hexr:role`.
+  </Step>
+  <Step title="SPIRE Server signs certificate">
+    The server matches the request against registration entries and signs an X.509 SVID for `spiffe://.../{role}`.
+  </Step>
+  <Step title="SVID delivered to pod">
+    The signed X.509 SVID (5-minute TTL) is delivered back to the pod via the Workload API. The process now has a cryptographic identity.
+  </Step>
+</Steps>
 
-    Pod->>PID: Process started (PID 42, role=researcher)
-    PID->>Agent: Workload API: FetchX509SVID
-    Agent->>Agent: Attestation (k8s:pod-uid, k8s:ns, hexr:role)
-    Agent->>Server: Request SVID for spiffe://.../{role}
-    Server->>Server: Match registration entry + sign cert
-    Server-->>Agent: X.509 SVID (5min TTL)
-    Agent-->>Pod: SVID delivered via Workload API
+```
+Agent Pod → PID Mapper → SPIRE Agent (attestation) → SPIRE Server (sign cert) → X.509 SVID → Pod
 ```
 
 ---

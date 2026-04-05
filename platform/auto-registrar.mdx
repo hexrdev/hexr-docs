@@ -17,22 +17,26 @@ The Auto-Registrar is a Kubernetes controller that:
 
 ## How It Works
 
-```mermaid
-sequenceDiagram
-    participant K8s as Kubernetes API
-    participant AR as Auto-Registrar
-    participant SPIRE as SPIRE Server
+<Steps>
+  <Step title="Pod created with hexr label">
+    Kubernetes creates a new pod with the `hexr.dev/agent=true` label. The Auto-Registrar watches for these events.
+  </Step>
+  <Step title="Read ProcessContext ConfigMap">
+    The Auto-Registrar reads the associated ProcessContext ConfigMap to discover all sub-processes (roles) the agent will spawn.
+  </Step>
+  <Step title="Create parent registration entry">
+    A SPIRE registration entry is created for the pod itself: `CreateEntry(parent=node, spiffeID, selectors)`.
+  </Step>
+  <Step title="Create per-process entries">
+    For each sub-process defined in the ProcessContext (e.g., `researcher`, `writer`, `editor`), a separate SPIRE registration entry is created with role-specific selectors.
+  </Step>
+</Steps>
 
-    K8s->>AR: Pod created (hexr.dev/agent=true)
-    AR->>K8s: Read ProcessContext ConfigMap
-    AR->>SPIRE: CreateEntry(parent=node, spiffeID, selectors)
-    SPIRE-->>AR: Entry created
-    
-    Note over AR,SPIRE: Repeats for each sub-process<br/>(researcher, writer, editor)
-    
-    AR->>SPIRE: CreateEntry(parent=node, researcher spiffeID, selectors)
-    AR->>SPIRE: CreateEntry(parent=node, writer spiffeID, selectors)
-    AR->>SPIRE: CreateEntry(parent=node, editor spiffeID, selectors)
+```
+K8s API (pod created) → Auto-Registrar → Read ConfigMap → SPIRE: CreateEntry (parent)
+                                                         → SPIRE: CreateEntry (researcher)
+                                                         → SPIRE: CreateEntry (writer)
+                                                         → SPIRE: CreateEntry (editor)
 ```
 
 ---

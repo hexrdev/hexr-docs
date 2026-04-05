@@ -46,25 +46,23 @@ def main():
 
 ## How It Works
 
-```mermaid
-sequenceDiagram
-    participant Agent
-    participant Envoy as Envoy Proxy
-    participant CI as Credential Injector
-    participant AWS as AWS STS
-    participant GCP as GCP STS
+<Steps>
+  <Step title="Agent requests AWS tool">
+    Your agent calls `hexr_tool("aws_s3", ...)`. The request goes through Envoy to the Credential Injector.
+  </Step>
+  <Step title="SPIFFE → AWS credential exchange">
+    The Credential Injector calls AWS `AssumeRoleWithWebIdentity` with the JWT-SVID. AWS returns temporary credentials (15-minute TTL).
+  </Step>
+  <Step title="Agent requests GCP tool">
+    Your agent calls `hexr_tool("gcp_bigquery", ...)`. Same flow through Envoy to the Credential Injector.
+  </Step>
+  <Step title="SPIFFE → GCP credential exchange">
+    The Credential Injector calls GCP STS for token exchange. GCP returns an `access_token` (60-minute TTL).
+  </Step>
+</Steps>
 
-    Agent->>Envoy: hexr_tool("aws_s3", ...)
-    Envoy->>CI: Exchange SPIFFE → AWS
-    CI->>AWS: AssumeRoleWithWebIdentity(JWT-SVID)
-    AWS-->>CI: Temporary creds (15min)
-    CI-->>Agent: S3 response
-
-    Agent->>Envoy: hexr_tool("gcp_bigquery", ...)
-    Envoy->>CI: Exchange SPIFFE → GCP
-    CI->>GCP: STS token exchange
-    GCP-->>CI: access_token (60min)
-    CI-->>Agent: BigQuery response
+```
+Agent → Envoy → Credential Injector → AWS STS (15min creds) / GCP STS (60min token)
 ```
 
 ---

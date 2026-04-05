@@ -81,29 +81,28 @@ my-models-bucket
 ## How It Works
 
 <Frame>
-```mermaid
-sequenceDiagram
-    participant You as Your Code
-    participant SDK as hexr_tool()
-    participant L1 as L1 Cache
-    participant L2 as L2 Valkey
-    participant CI as Credential Injector
-    participant STS as AWS STS
-
-    You->>SDK: s3 = hexr_tool("aws_s3")
-    SDK->>L1: Check in-memory cache
-    L1-->>SDK: MISS
-    SDK->>L2: Check Valkey
-    L2-->>SDK: MISS
-    SDK->>CI: Exchange JWT-SVID for credentials
-    CI->>STS: AssumeRoleWithWebIdentity
-    STS-->>CI: {AccessKeyId, SecretKey, Token}
-    CI-->>SDK: Temporary credentials
-    SDK->>L1: Cache for next call
-    SDK->>L2: Cache cluster-wide
-    SDK-->>You: boto3.client('s3', credentials=...)
-```
+<Steps>
+  <Step title="Your code calls hexr_tool()">
+    `s3 = hexr_tool("aws_s3")` — the SDK starts the credential resolution chain.
+  </Step>
+  <Step title="L1 cache check (in-memory)">
+    The SDK checks the in-memory L1 cache for existing credentials. On miss, proceeds to L2.
+  </Step>
+  <Step title="L2 cache check (Valkey)">
+    The SDK checks the cluster-wide Valkey L2 cache. On miss, proceeds to credential exchange.
+  </Step>
+  <Step title="Credential exchange">
+    The SDK sends the JWT-SVID to the Credential Injector, which calls AWS `AssumeRoleWithWebIdentity`. AWS STS returns `{AccessKeyId, SecretKey, Token}`.
+  </Step>
+  <Step title="Cache and return">
+    Credentials are cached in both L1 (in-memory) and L2 (Valkey cluster-wide). Returns a configured `boto3.client('s3', credentials=...)` ready to use.
+  </Step>
+</Steps>
 </Frame>
+
+```
+Your Code → hexr_tool() → L1 Cache → L2 Valkey → Credential Injector → AWS STS → Temp creds → boto3 client
+```
 
 ---
 

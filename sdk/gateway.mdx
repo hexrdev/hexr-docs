@@ -180,23 +180,28 @@ mcp_format = tool.to_mcp_format()
 ## How It Works
 
 <Frame>
-```mermaid
-sequenceDiagram
-    participant Agent as Your Agent
-    participant GW as Hexr Gateway
-    participant VAULT as Hexr Vault
-    participant API as External API
-
-    Agent->>GW: call_tool("brave_web_search", {query: "..."})
-    Note over GW: Lookup tool definition
-    Note over GW: Validate arguments against schema
-    GW->>VAULT: Fetch API key for Brave Search
-    VAULT-->>GW: API key (SPIFFE-authenticated)
-    GW->>API: GET /search?q=... (with API key header)
-    API-->>GW: Search results
-    GW-->>Agent: ToolResult(success=true, result=...)
-```
+<Steps>
+  <Step title="Agent calls call_tool()">
+    Your agent calls `call_tool("brave_web_search", {query: "..."})` via the Gateway SDK.
+  </Step>
+  <Step title="Gateway looks up tool definition">
+    The Gateway resolves the tool name to its registered definition and validates the arguments against the parameter schema.
+  </Step>
+  <Step title="Fetch credentials from Vault">
+    The Gateway requests the API key for Brave Search from Hexr Vault (SPIFFE-authenticated).
+  </Step>
+  <Step title="Proxy request to external API">
+    The Gateway sends `GET /search?q=...` to the Brave API with the injected API key header.
+  </Step>
+  <Step title="Return structured result">
+    Search results are returned to the agent as `ToolResult(success=true, result=...)`.
+  </Step>
+</Steps>
 </Frame>
+
+```
+Agent → Gateway (lookup + validate) → Vault (API key) → External API → ToolResult → Agent
+```
 
 The Gateway:
 1. **Validates** arguments against the tool's parameter schema

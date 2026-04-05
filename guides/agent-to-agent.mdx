@@ -119,16 +119,18 @@ All A2A communication is:
 - **OPA authorized** — policies control which agents can communicate
 - **Audited** — every message is traced via OpenTelemetry
 
-```mermaid
-sequenceDiagram
-    participant A as Agent A<br/>(coordinator)
-    participant E as Envoy Proxy
-    participant OPA as OPA
-    participant B as Agent B<br/>(researcher)
+<Steps>
+  <Step title="Agent A sends task via mTLS">
+    Agent A (coordinator) sends a task to Agent B (researcher) through the Envoy proxy, authenticated with its SPIFFE identity.
+  </Step>
+  <Step title="OPA authorizes the request">
+    Envoy checks with OPA: "Can `coordinator` communicate with `researcher`?" OPA returns ALLOW.
+  </Step>
+  <Step title="Task delivered over mTLS">
+    Envoy delivers the task to Agent B over mTLS. Agent B processes it and returns the result.
+  </Step>
+</Steps>
 
-    A->>E: Send task to researcher (SPIFFE mTLS)
-    E->>OPA: Can coordinator → researcher?
-    OPA-->>E: ALLOW
-    E->>B: Deliver task (mTLS)
-    B-->>A: Result
+```
+Agent A (coordinator) → Envoy (mTLS) → OPA (authorize) → Agent B (researcher) → Result → A
 ```

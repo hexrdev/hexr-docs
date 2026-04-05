@@ -16,35 +16,29 @@ Hexr is built on three security principles:
 
 ## Security Layers
 
-```mermaid
-graph TB
-    subgraph "Layer 1: Identity"
-        SPIRE["SPIFFE/SPIRE<br/>Per-process X.509 SVIDs"]
-    end
-    
-    subgraph "Layer 2: Transport"
-        MTLS["Envoy mTLS<br/>All traffic encrypted"]
-    end
-    
-    subgraph "Layer 3: Authorization"
-        OPA["OPA Policies<br/>Per-process access control"]
-    end
-    
-    subgraph "Layer 4: Credentials"
-        CRED["Credential Injector<br/>Short-lived cloud tokens"]
-        CACHE["3-Tier Cache<br/>Per-identity isolation"]
-    end
-    
-    subgraph "Layer 5: GenAI"
-        GUARD["LLM Guard<br/>Prompt injection, PII, secrets"]
-    end
-    
-    subgraph "Layer 6: Isolation"
-        SAND["Firecracker Sandbox<br/>microVM code execution"]
-        NS["Kubernetes Namespaces<br/>Tenant isolation"]
-    end
-    
-    SPIRE --> MTLS --> OPA --> CRED --> GUARD --> SAND
+<AccordionGroup>
+  <Accordion title="Layer 1: Identity" icon="fingerprint">
+    **SPIFFE/SPIRE** — Every process gets a unique X.509 SVID. Per-process identity, not just per-pod.
+  </Accordion>
+  <Accordion title="Layer 2: Transport" icon="lock">
+    **Envoy mTLS** — All inter-service traffic is encrypted with mutual TLS using SPIFFE certificates.
+  </Accordion>
+  <Accordion title="Layer 3: Authorization" icon="shield-halved">
+    **OPA Policies** — Per-process access control. Every request is evaluated against Rego policies.
+  </Accordion>
+  <Accordion title="Layer 4: Credentials" icon="key">
+    **Credential Injector** — Short-lived cloud tokens (15-60 min TTL). 3-tier cache with per-identity isolation.
+  </Accordion>
+  <Accordion title="Layer 5: GenAI" icon="brain">
+    **LLM Guard** — Prompt injection detection, PII scanning, secrets scanning, invisible text detection.
+  </Accordion>
+  <Accordion title="Layer 6: Isolation" icon="box">
+    **Firecracker Sandbox** — microVM code execution with hardware-level isolation. **Kubernetes Namespaces** — tenant isolation.
+  </Accordion>
+</AccordionGroup>
+
+```
+Identity (SPIRE) → Transport (mTLS) → Authorization (OPA) → Credentials → GenAI Guard → Sandbox Isolation
 ```
 
 ---

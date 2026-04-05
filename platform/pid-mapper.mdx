@@ -19,22 +19,26 @@ When a new process starts in the agent container (e.g., a CrewAI spawns a resear
 
 ## How It Works
 
-```mermaid
-sequenceDiagram
-    participant Agent as Agent Container
-    participant PID as PID Mapper
-    participant Proc as /proc filesystem
-    participant SPIRE as SPIRE Agent
+<Steps>
+  <Step title="Agent forks subprocess">
+    The agent container spawns a new subprocess (e.g., `researcher` at PID 42).
+  </Step>
+  <Step title="PID Mapper detects new process">
+    The PID Mapper watches `/proc` and detects the new PID 42. It reads `/proc/42/cmdline` to identify the process.
+  </Step>
+  <Step title="Match to process context">
+    The PID is matched against the `process-context/researcher.json` file to determine the SPIFFE role.
+  </Step>
+  <Step title="Fetch SVID from SPIRE">
+    PID Mapper calls `FetchX509SVID` with selectors `hexr:role:researcher` + `k8s:pod-uid:...`. SPIRE returns an X.509 SVID for `spiffe://.../researcher`.
+  </Step>
+  <Step title="Register SVID for PID">
+    The SVID is registered for PID 42. When the researcher process calls `hexr_tool()`, Envoy automatically uses this specific SVID for mTLS.
+  </Step>
+</Steps>
 
-    Agent->>Agent: Fork subprocess (researcher, PID 42)
-    PID->>Proc: Detect new PID 42
-    PID->>PID: Read /proc/42/cmdline
-    PID->>PID: Match to process-context/researcher.json
-    PID->>SPIRE: FetchX509SVID(selectors=[hexr:role:researcher, k8s:pod-uid:...])
-    SPIRE-->>PID: X.509 SVID for spiffe://.../researcher
-    PID->>PID: Register SVID for PID 42
-    
-    Note over Agent,SPIRE: When researcher calls hexr_tool(),<br/>Envoy uses this specific SVID
+```
+Agent (fork PID 42) → PID Mapper → /proc/42/cmdline → Match role → SPIRE (FetchX509SVID) → SVID registered
 ```
 
 ---

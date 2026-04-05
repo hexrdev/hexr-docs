@@ -24,21 +24,26 @@ The Sandbox Engine provides isolated code execution environments for AI agents. 
 
 ## Execution Flow
 
-```mermaid
-sequenceDiagram
-    participant Agent as Agent Container
-    participant GW as Gateway (via Envoy)
-    participant Sand as Sandbox Engine
-    participant VM as Firecracker microVM
+<Steps>
+  <Step title="Agent requests code execution">
+    Your agent calls `hexr.sandbox.exec(code, language="python")`. The request routes through Envoy to the Gateway.
+  </Step>
+  <Step title="Gateway forwards to Sandbox Engine">
+    The Gateway forwards the execute request along with the caller's SPIFFE ID.
+  </Step>
+  <Step title="Firecracker microVM boots">
+    The Sandbox Engine boots a Firecracker microVM in under 125ms with the requested runtime.
+  </Step>
+  <Step title="Code executes in isolation">
+    The code runs inside the microVM with no network access and no host filesystem visibility.
+  </Step>
+  <Step title="Results captured and VM destroyed">
+    `stdout`, `stderr`, and `exit_code` are captured. Execution telemetry is recorded. The microVM is immediately destroyed.
+  </Step>
+</Steps>
 
-    Agent->>GW: hexr.sandbox.exec(code, language="python")
-    GW->>Sand: Execute request + SPIFFE ID
-    Sand->>VM: Boot microVM (< 125ms)
-    VM->>VM: Execute code in isolation
-    VM-->>Sand: stdout, stderr, exit_code
-    Sand->>Sand: Record execution telemetry
-    Sand-->>Agent: ExecResult
-    Sand->>VM: Destroy microVM
+```
+Agent → Gateway (via Envoy) → Sandbox Engine → Boot microVM (<125ms) → Execute → Result → Destroy VM
 ```
 
 ---

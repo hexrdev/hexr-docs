@@ -12,16 +12,32 @@ LLM Guard intercepts all `hexr_llm()` calls and scans prompts and responses for 
 
 ## Scanning Pipeline
 
-```mermaid
-graph LR
-    A[Prompt] --> B[Prompt Injection<br/>Detection]
-    B --> C[PII Scanner]
-    C --> D[Secrets Scanner]
-    D --> E[Token Limit<br/>Check]
-    E --> F[LLM Provider]
-    F --> G[Response<br/>Scanner]
-    G --> H[Topic Boundary<br/>Check]
-    H --> I[Agent]
+<Steps>
+  <Step title="Prompt Injection Detection">
+    Incoming prompt is analyzed for injection attacks, jailbreak attempts, and adversarial patterns.
+  </Step>
+  <Step title="PII Scanner">
+    Detects and optionally redacts personally identifiable information (names, emails, SSNs, etc.).
+  </Step>
+  <Step title="Secrets Scanner">
+    Catches API keys, tokens, passwords, and other credentials before they reach the LLM.
+  </Step>
+  <Step title="Token Limit Check">
+    Validates the prompt fits within the configured token budget for the model.
+  </Step>
+  <Step title="LLM Provider">
+    The sanitized prompt is forwarded to the configured LLM provider.
+  </Step>
+  <Step title="Response Scanner">
+    The LLM response is scanned for leaked secrets, hallucinated PII, and policy violations.
+  </Step>
+  <Step title="Topic Boundary Check">
+    Ensures the response stays within the agent's configured topic boundaries.
+  </Step>
+</Steps>
+
+```
+Prompt → Injection Check → PII Scan → Secrets Scan → Token Check → LLM → Response Scan → Topic Check → Agent
 ```
 
 ---

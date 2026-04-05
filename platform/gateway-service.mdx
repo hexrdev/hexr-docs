@@ -48,21 +48,26 @@ Tools are registered via three mechanisms:
 
 ## Request Flow
 
-```mermaid
-sequenceDiagram
-    participant Agent as Agent Container
-    participant GW as Gateway Service
-    participant CI as Credential Injector
-    participant API as External API
+<Steps>
+  <Step title="Agent calls hexr_tool()">
+    Your agent calls `hexr_tool("aws_s3")` which invokes `s3.list_buckets()`. The request goes to the Gateway via Envoy.
+  </Step>
+  <Step title="Gateway resolves tool">
+    The Gateway resolves `aws_s3` to the S3 endpoint and validates the request.
+  </Step>
+  <Step title="Credential exchange">
+    The Gateway calls the Credential Injector to exchange the caller's SPIFFE identity for temporary AWS credentials.
+  </Step>
+  <Step title="API call with credentials">
+    The Gateway calls `ListBuckets` on the S3 API using SigV4 signing with the temporary credentials.
+  </Step>
+  <Step title="Response with telemetry">
+    The API response is returned to the agent. A telemetry span is recorded for the entire request lifecycle.
+  </Step>
+</Steps>
 
-    Agent->>GW: hexr_tool("aws_s3") → s3.list_buckets()
-    GW->>GW: Resolve "aws_s3" → S3 endpoint
-    GW->>CI: Exchange SPIFFE → AWS credentials
-    CI-->>GW: Temporary AWS creds
-    GW->>API: ListBuckets (with SigV4)
-    API-->>GW: Response
-    GW->>GW: Record telemetry span
-    GW-->>Agent: Response
+```
+Agent → Gateway → Credential Injector (SPIFFE → AWS creds) → S3 API → Response → Agent
 ```
 
 ---

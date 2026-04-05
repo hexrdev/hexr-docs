@@ -18,13 +18,11 @@ Every agent pod includes an Envoy proxy sidecar that:
 
 ## Traffic Flow
 
-```mermaid
-graph LR
-    A[Agent Container] -->|plaintext| E[Envoy :15001]
-    E -->|mTLS| CI[Credential Injector]
-    E -->|mTLS| GW[Gateway]
-    E -->|mTLS| V[Vault]
-    E -->|OPA check| OPA[OPA Sidecar]
+```
+Agent Container → Envoy :15001 →┌─ Credential Injector (mTLS)
+                                ├─ Gateway (mTLS)
+                                ├─ Vault (mTLS)
+                                └─ OPA Sidecar (policy check)
 ```
 
 All outbound traffic from the agent container passes through Envoy, which upgrades it to mTLS using the process-specific SVID.

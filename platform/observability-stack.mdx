@@ -18,26 +18,38 @@ description: "OpenTelemetry Collector, Prometheus, Grafana, and Loki — full ob
 
 ## Data Flow
 
-```mermaid
-graph LR
-    subgraph "Agent Pods"
-        A1[Agent 1] --> OTEL
-        A2[Agent 2] --> OTEL
-        A3[Agent 3] --> OTEL
-    end
-    
-    subgraph "Platform Services"
-        CI[Cred Injector] --> OTEL
-        GW[Gateway] --> OTEL
-        VAULT[Vault] --> OTEL
-    end
-    
-    OTEL[OTel Collector] --> PROM[Prometheus]
-    OTEL --> LOKI[Loki]
-    OTEL --> TEMPO[Tempo]
-    PROM --> GRAF[Grafana]
-    LOKI --> GRAF
-    TEMPO --> GRAF
+<Tabs>
+  <Tab title="Agent Pods">
+    Every agent pod sends telemetry (traces, metrics, logs) to the OTel Collector:
+
+    - Agent 1 → OTel Collector
+    - Agent 2 → OTel Collector
+    - Agent 3 → OTel Collector
+  </Tab>
+  <Tab title="Platform Services">
+    Platform services also emit telemetry:
+
+    - Credential Injector → OTel Collector
+    - Gateway → OTel Collector
+    - Vault → OTel Collector
+  </Tab>
+  <Tab title="Storage & Visualization">
+    The OTel Collector routes telemetry to the appropriate backends:
+
+    | Backend | Data Type |
+    |---------|:---------|
+    | **Prometheus** | Metrics (counters, histograms, gauges) |
+    | **Loki** | Logs (structured, labeled) |
+    | **Tempo** | Traces (distributed spans) |
+    | **Grafana** | Visualization — queries Prometheus, Loki, and Tempo |
+  </Tab>
+</Tabs>
+
+```
+Agent Pods + Platform Services → OTel Collector → Prometheus (metrics)
+                                                  → Loki (logs)
+                                                  → Tempo (traces)
+                                                  → Grafana (dashboards)
 ```
 
 ---

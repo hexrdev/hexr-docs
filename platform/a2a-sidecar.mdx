@@ -19,21 +19,26 @@ The A2A Sidecar runs in every agent pod with A2A enabled. It:
 
 The A2A protocol follows Google's [Agent-to-Agent](https://google.github.io/A2A/) specification with Hexr extensions for SPIFFE identity.
 
-```mermaid
-sequenceDiagram
-    participant A as Agent A
-    participant SA as A2A Sidecar A
-    participant SB as A2A Sidecar B
-    participant B as Agent B
+<Steps>
+  <Step title="Agent A sends task">
+    Agent A calls the A2A sidecar to send a task to Agent B.
+  </Step>
+  <Step title="Sidecar resolves target">
+    A2A Sidecar A resolves Agent B's location via its Agent Card.
+  </Step>
+  <Step title="mTLS delivery">
+    Sidecar A sends `POST /tasks` to Sidecar B over mTLS, authenticated with SPIFFE certificates.
+  </Step>
+  <Step title="SPIFFE ID validation">
+    Sidecar B validates the caller's SPIFFE ID against its access policy.
+  </Step>
+  <Step title="Task delivered and result returned">
+    The task is delivered to Agent B, which processes it and returns the result back through the sidecar chain.
+  </Step>
+</Steps>
 
-    A->>SA: Send task to Agent B
-    SA->>SA: Resolve Agent B via Agent Card
-    SA->>SB: POST /tasks (mTLS, SPIFFE-authenticated)
-    SB->>SB: Validate SPIFFE ID
-    SB->>B: Deliver task
-    B-->>SB: Task result
-    SB-->>SA: Response
-    SA-->>A: Result
+```
+Agent A → A2A Sidecar A → (mTLS + SPIFFE) → A2A Sidecar B → Agent B → Result → A
 ```
 
 ---

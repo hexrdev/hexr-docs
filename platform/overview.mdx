@@ -8,37 +8,38 @@ description: "The Hexr platform runs 10+ services in every agent pod and across 
 
 Every Hexr agent pod runs as a **bare Kubernetes Pod** (not a Deployment) with these containers:
 
-```mermaid
-graph TB
-    subgraph "Agent Pod"
-        INIT["init: install-hexr-sdk"]
-        AGENT["Agent Container<br/>(your code)"]
-        ENVOY["Envoy Proxy Sidecar"]
-        A2A["A2A Sidecar"]
-        PID["PID Mapper"]
-    end
+<Tabs>
+  <Tab title="Agent Pod">
+    | Container | Role |
+    |-----------|------|
+    | **init: install-hexr-sdk** | Init container — installs the Hexr SDK into the agent environment |
+    | **Agent Container** | Your code — the agent you wrote and deployed |
+    | **Envoy Proxy Sidecar** | mTLS mesh — all outbound traffic encrypted with SPIFFE SVIDs |
+    | **A2A Sidecar** | Agent-to-agent communication (JSON-RPC 2.0 over mTLS) |
+    | **PID Mapper** | Maps host PIDs to SPIFFE identities for per-process attestation |
+  </Tab>
+  <Tab title="Cluster Services">
+    | Service | Purpose |
+    |---------|:--------|
+    | **SPIRE Server + Agent** | Certificate authority + per-node workload attestation |
+    | **Auto-Registrar** | Watches for hexr pods, creates SPIRE registration entries |
+    | **Credential Injector** | Exchanges SPIFFE SVIDs for short-lived cloud credentials |
+    | **Hexr Vault** | SPIFFE-native secret storage (AES-256-GCM) |
+    | **Hexr Gateway** | Tool proxy — routes `hexr_tool()` calls to external APIs |
+    | **Sandbox Engine** | Firecracker microVM code execution |
+    | **LLM Guard** | Prompt/response scanning (injection, PII, secrets) |
+    | **Valkey (Redis)** | 3-node HA — credential cache + A2A task state |
+    | **OTel Collector** | Telemetry aggregation (traces, metrics, logs) |
+    | **OPA** | Policy enforcement sidecar (per pod) |
+  </Tab>
+</Tabs>
 
-    subgraph "Cluster Services"
-        SPIRE["SPIRE Server + Agent"]
-        REG["Auto-Registrar"]
-        CRED["Credential Injector"]
-        VAULT["Hexr Vault"]
-        GW["Hexr Gateway"]
-        SAND["Sandbox Engine"]
-        GUARD["LLM Guard"]
-        VALKEY["Valkey (Redis)"]
-        OTEL["OTel Collector"]
-        OPA["OPA (sidecar per pod)"]
-    end
-
-    AGENT --> ENVOY --> CRED
-    AGENT --> A2A
-    PID --> SPIRE
-    AGENT --> VAULT
-    AGENT --> GW
-    AGENT --> SAND
-    AGENT --> GUARD
-    REG --> SPIRE
+```
+Agent Container → Envoy Proxy → Credential Injector / Gateway / Vault
+Agent Container → A2A Sidecar
+PID Mapper → SPIRE Agent/Server
+Auto-Registrar → SPIRE Server
+All services → OTel Collector → Grafana
 ```
 
 ---

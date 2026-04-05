@@ -189,22 +189,24 @@ This means even if sandboxed code is malicious (e.g., prompt injection leads to 
 ## Architecture
 
 <Frame>
-```mermaid
-sequenceDiagram
-    participant Agent as Agent Container
-    participant Envoy as Envoy Sidecar
-    participant SB as Sandbox Service :8092
-    participant VM as Firecracker microVM
-
-    Agent->>Envoy: POST /execute (plaintext)
-    Envoy->>SB: POST /execute (mTLS)
-    SB->>VM: Boot microVM + inject code
-    VM->>VM: Execute code
-    VM-->>SB: stdout + stderr + exit_code
-    SB->>SB: Destroy VM
-    SB-->>Envoy: ExecResult
-    Envoy-->>Agent: ExecResult
-```
+<Steps>
+  <Step title="Agent sends execute request">
+    The agent container sends `POST /execute` in plaintext to the Envoy sidecar.
+  </Step>
+  <Step title="Envoy upgrades to mTLS">
+    Envoy forwards `POST /execute` to the Sandbox Service (port 8092) over mTLS.
+  </Step>
+  <Step title="microVM boots and code runs">
+    The Sandbox Service boots a Firecracker microVM and injects the code. The code executes inside the VM.
+  </Step>
+  <Step title="Results returned, VM destroyed">
+    `stdout`, `stderr`, and `exit_code` are captured. The VM is immediately destroyed. The `ExecResult` is returned through Envoy to the agent.
+  </Step>
+</Steps>
 </Frame>
+
+```
+Agent → Envoy (plaintext → mTLS) → Sandbox :8092 → Firecracker microVM → ExecResult → Agent
+```
 
 Built on [SmolVM](https://github.com/nicholasgasior/smolvm) — a thin Firecracker wrapper (Apache-2.0).

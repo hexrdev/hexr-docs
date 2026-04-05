@@ -17,20 +17,26 @@ Hexr Vault provides encrypted secret storage for AI agents. Secrets are:
 
 ## How Access Works
 
-```mermaid
-sequenceDiagram
-    participant Agent as Agent Container
-    participant SDK as Hexr SDK
-    participant Envoy as Envoy Proxy
-    participant Vault as Vault Service
+<Steps>
+  <Step title="Agent requests secret">
+    Your code calls `vault.get("OPENAI_API_KEY")` via the Hexr SDK.
+  </Step>
+  <Step title="SDK routes through Envoy">
+    The SDK sends `GET /api/v1/secrets/OPENAI_API_KEY` to the Envoy proxy sidecar.
+  </Step>
+  <Step title="Envoy extracts SPIFFE ID">
+    Envoy extracts the SPIFFE ID from the mTLS connection and adds it as the `x-hexr-spiffe-id` header.
+  </Step>
+  <Step title="Vault verifies scope">
+    The Vault Service verifies the SPIFFE ID matches the secret's configured access scope.
+  </Step>
+  <Step title="Decrypt and return">
+    The secret is decrypted (AES-256-GCM) and the plaintext value is returned to the agent.
+  </Step>
+</Steps>
 
-    Agent->>SDK: vault.get("OPENAI_API_KEY")
-    SDK->>Envoy: GET /api/v1/secrets/OPENAI_API_KEY
-    Envoy->>Envoy: Extract SPIFFE ID from mTLS
-    Envoy->>Vault: Forward + x-hexr-spiffe-id header
-    Vault->>Vault: Verify SPIFFE ID matches secret scope
-    Vault->>Vault: AES-256-GCM decrypt
-    Vault-->>Agent: Plaintext value
+```
+Agent → SDK → Envoy (extract SPIFFE ID) → Vault (verify scope + AES-256 decrypt) → Plaintext value
 ```
 
 ---
