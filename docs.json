@@ -170,6 +170,7 @@
               "platform/gateway-service",
               "platform/sandbox",
               "platform/llm-guard",
+              "platform/observability-stack",
               "platform/dashboard",
               "platform/cloud-api"
             ]
