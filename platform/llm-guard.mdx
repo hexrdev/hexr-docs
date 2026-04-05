@@ -84,3 +84,40 @@ if result.flagged:
 | `PII_DETECTION_THRESHOLD` | `0.85` | Confidence threshold for PII detection |
 | `INJECTION_DETECTION_MODEL` | `built-in` | Prompt injection detection model |
 | `BLOCK_ON_DETECTION` | `true` | Block or warn on detection |
+
+---
+
+## Observability
+
+LLM Guard is fully instrumented with OpenTelemetry. Every scan generates span attributes on the parent `hexr.llm.call` span and emits dedicated metrics.
+
+### Span Attributes
+
+When LLM Guard blocks a prompt or response, the following attributes are set on the `hexr.llm.call` span:
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `hexr.guard.prompt_blocked` | `bool` | `true` if the input prompt was blocked |
+| `hexr.guard.scanners` | `string` | Scanner results that triggered the prompt block |
+| `hexr.guard.output_blocked` | `bool` | `true` if the LLM response was blocked |
+| `hexr.guard.output_scanners` | `string` | Scanner results that triggered the output block |
+
+Blocked requests set the span status to `ERROR` with a description like `"Blocked by LLM Guard"` or `"Output blocked by LLM Guard"`.
+
+### Metrics
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `hexr_guard_scans_total` | Counter | Total scans by direction (`input`/`output`) and scanner |
+| `hexr_guard_blocks_total` | Counter | Total blocks by direction and scanner |
+| `hexr_guard_scan_duration_seconds` | Histogram | Scan latency by direction |
+
+### Grafana Dashboard
+
+The **Security** dashboard includes an LLM Guard panel showing:
+- Block rate over time (prompt vs. response)
+- Top triggered scanners
+- Scan latency percentiles
+- Blocks by tenant and agent
+
+See [Observability Stack](/platform/observability-stack) for the full telemetry pipeline.
