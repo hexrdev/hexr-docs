@@ -1,18 +1,109 @@
 ---
 title: "Compliance Frameworks"
 sidebarTitle: "Compliance"
-description: "How Hexr's architecture maps to SOC 2, NIST AI RMF, GDPR, HIPAA, and FedRAMP requirements."
+description: "How Hexr maps to FFIEC, SOC 2, HIPAA §164.312, NIST 800-53, FedRAMP IL5, CMMC L3, and EU AI Act — with signed evidence rows your auditor can verify."
 ---
 
-## Compliance Readiness
+## Evidence-First Compliance
 
-| Framework | Status | Key Controls |
-|-----------|--------|-------------|
-| **SOC 2 Type II** | Architecture ready | Encryption at rest, audit logging, access controls |
-| **NIST AI RMF** | Architecture ready | Agent discovery, metrics, policy management |
-| **GDPR** | Architecture ready | Data isolation per tenant, encryption, right to deletion |
-| **HIPAA** | Architecture ready | PHI isolation, audit trails, encryption |
-| **FedRAMP** | Self-hosted air-gapped | Air-gapped deployment, FIPS-compatible cryptography |
+Hexr doesn't just claim compliance — it produces signed evidence rows in your own Postgres that map every agent action to a named control. When your auditor asks what your AI agents did last Tuesday, `hexr audit` generates a signed PDF with the answer.
+
+Evidence stays in your cluster. Nothing is sent to Hexr's infrastructure.
+
+---
+
+## Buyer Ring → Framework Mapping
+
+| Buyer Ring | Frameworks | Hexr Answer |
+|---|---|---|
+| **Ring 1** — Multi-cloud finserv | FFIEC, SEC, FINRA, SOC 2 Type II | Per-process SPIFFE + OPA deny logged with policy version + signed evidence rows in customer Postgres |
+| **Ring 2** — Regulated healthcare | HIPAA §164.312 Technical Safeguards | BYO Vault PKI (Mode B) — zero cloud CA involvement, PHI never crosses VPC boundary, BAA-compatible |
+| **Ring 3** — Defense / govtech | FedRAMP IL5, ITAR, CMMC L3 | Air-gapped Mode C — no internet egress, customer-owned root CA, FIPS-compatible crypto |
+| **Ring 4** — AmLaw 100 + Big-4 | Client data jurisdiction | Cross-cluster A2A mTLS with federated SPIFFE — full delegation chain in evidence, no data co-mingling |
+
+---
+
+## Framework Mapping
+
+### SOC 2 Type II
+
+| Control | Hexr Implementation | Evidence Row Field |
+|---|---|---|
+| **CC6.1** Logical Access | SPIFFE per-process identity + OPA policies + mTLS | `spiffe_id`, `policy_result`, `policy_version` |
+| **CC6.2** User Authentication | X.509 SVIDs (5-min TTL, auto-rotate) | `spiffe_id`, `svid_serial` |
+| **CC6.3** Access Authorization | OPA Rego per-process, fail-closed | `policy_result=DENY/ALLOW`, `rego_rule` |
+| **CC7.1** Monitoring | OTel traces + Prometheus metrics | `trace_id`, `span_id` |
+| **CC7.2** Incident Response | Audit log, credential revocation | Full evidence row, immutable |
+| **CC8.1** Change Management | `hexr build` reproducible artifacts | `build_hash`, `manifest_version` |
+
+### HIPAA §164.312 Technical Safeguards
+
+| Safeguard | Standard | Hexr Implementation |
+|---|---|---|
+| Access control | §164.312(a)(1) | SPIFFE identity + OPA — every PHI-touching call requires a valid SVID |
+| Audit controls | §164.312(b) | Signed evidence row per agent action, stored in customer Postgres |
+| Integrity | §164.312(c)(1) | AES-256-GCM at rest (Vault), mTLS in transit, evidence rows signed |
+| Transmission security | §164.312(e)(1) | TLS 1.3 + mTLS everywhere, no plaintext paths |
+| PHI boundary | BAA scope | Mode B: your Vault PKI signs the intermediate CA — zero cloud CA involvement |
+
+### NIST 800-53 (FedRAMP)
+
+| Control Family | Hexr Implementation |
+|---|---|
+| **AU-2** Auditable Events | Every agent action → evidence row with `control=AU-2` tag |
+| **AU-9** Protection of Audit Information | Evidence rows immutable, signed with agent SVID |
+| **IA-2** Identification & Authentication | SPIFFE X.509-SVID per process |
+| **SC-8** Transmission Confidentiality | mTLS (TLS 1.3) on all service-to-service paths |
+| **SC-28** Protection at Rest | AES-256-GCM (Vault), customer-managed key |
+| **SI-3** Malicious Code Protection | OPA deny on unattested processes — no SVID, no tool call |
+
+### FFIEC (Multi-Cloud Finserv)
+
+| Requirement | Hexr Implementation |
+|---|---|
+| Vendor concentration risk (§500.11 equivalent) | Cloud-agnostic — same evidence row format on AWS, GCP, Azure, on-prem |
+| Per-process attestation | `hostPID` DaemonSet attests every subprocess at node level |
+| Audit trail | Signed evidence rows in customer Postgres — not a vendor SaaS log |
+| Cryptographic key custody | Mode B: customer Vault PKI holds the intermediate CA private key |
+
+### EU AI Act
+
+| Obligation | Hexr Implementation |
+|---|---|
+| Logging & traceability | OTel spans + evidence rows per agent action |
+| Human oversight | OPA policies with human-reviewable Rego, GitOps audit trail |
+| Risk management documentation | `hexr audit` PDF maps actions to control framework |
+| Data governance | Evidence stays in customer VPC, no cross-border transfers |
+
+---
+
+## Generating the Auditor PDF
+
+```bash
+hexr audit \
+  --framework soc2,hipaa,nist \
+  --start 2026-01-01 \
+  --end 2026-03-31 \
+  --output q1-audit-report.pdf
+```
+
+The PDF includes:
+- Every agent action in the date range
+- SPIFFE identity of the process that triggered it
+- OPA policy result (ALLOW/DENY) and policy version
+- Compliance control it maps to
+- Cryptographic signature for tamper evidence
+
+---
+
+## Encryption Summary
+
+| Data | Method |
+|---|---|
+| In transit | mTLS (SPIFFE SVIDs, TLS 1.3) — all service-to-service |
+| At rest (secrets) | AES-256-GCM (Hexr Vault, customer Postgres) |
+| At rest (evidence) | Customer Postgres with storage-level encryption |
+| In cache | Valkey in-cluster only — no external access |
 
 ---
 

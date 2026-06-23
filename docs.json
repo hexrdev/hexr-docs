@@ -24,15 +24,13 @@
   },
   "navbar": {
     "links": [
-      { "label": "Dashboard", "href": "https://app.hexr.cloud" },
       { "label": "Status", "href": "https://status.hexr.cloud" },
-      { "label": "GitHub", "href": "https://github.com/hexr-dev" },
-      { "label": "Community", "href": "https://discord.gg/hexr" }
+      { "label": "GitHub", "href": "https://github.com/hexrdev" }
     ],
     "primary": {
       "type": "button",
-      "label": "Get Started",
-      "href": "https://hexr.dev"
+      "label": "Book a Demo",
+      "href": "https://hexr.dev#cta"
     }
   },
   "navigation": {
@@ -49,18 +47,10 @@
             ]
           },
           {
-            "group": "Hexr Cloud",
-            "pages": [
-              "cloud/quickstart",
-              "cloud/credits",
-              "cloud/dashboard",
-              "cloud/api-keys"
-            ]
-          },
-          {
-            "group": "Self-Hosted",
+            "group": "Self-Hosted Deployment",
             "pages": [
               "self-hosted/quickstart",
+              "self-hosted/helm",
               "self-hosted/terraform",
               "self-hosted/air-gapped"
             ]
@@ -170,9 +160,7 @@
               "platform/gateway-service",
               "platform/sandbox",
               "platform/llm-guard",
-              "platform/observability-stack",
-              "platform/dashboard",
-              "platform/cloud-api"
+              "platform/observability-stack"
             ]
           },
           {

@@ -1,7 +1,7 @@
 ---
 title: "Self-Hosted Quick Start"
 sidebarTitle: "Quick Start"
-description: "Deploy the full Hexr platform on your own Kubernetes cluster."
+description: "Deploy Hexr on your own Kubernetes cluster — EKS, GKE Standard, AKS, or on-premises. Your cluster, your Postgres, your evidence."
 ---
 
 ## Prerequisites
@@ -103,7 +103,7 @@ kubectl get pods -n spire
 # cred-injector-xxxxx               1/1     Running
 # hexr-vault-xxxxx                  1/1     Running
 # hexr-gateway-xxxxx                1/1     Running
-# hexr-dashboard-xxxxx              1/1     Running
+# hexr-dashboard removed — dashboard runs in your cluster via Helm values
 # otel-collector-xxxxx              1/1     Running
 # valkey-0                          1/1     Running
 ```

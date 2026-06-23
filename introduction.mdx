@@ -1,7 +1,19 @@
 ---
 title: "Hexr Documentation"
 sidebarTitle: "Introduction"
-description: "The identity-first runtime platform for AI agents. Deploy secure, observable, multi-cloud agents with cryptographic identity — from a single Python decorator."
+description: "Audit-grade evidence for AI agents — in your cluster. Per-process SPIFFE identity, OPA policy enforcement, and signed evidence rows in your own Postgres."
+---
+
+## What Hexr is
+
+Hexr is what you get if Iru, CrowdStrike, and Datadog had a child specifically for AI agents.
+
+- **Like Iru** — every agent action maps to a named control: SOC 2 CC6.1, HIPAA §164.312, NIST SSDF PW.4, FedRAMP AU-2.
+- **Like CrowdStrike** — a privileged DaemonSet with `hostPID` gives every subprocess its own SPIFFE identity, cryptographically attested at the node level. Not per pod. Per process.
+- **Like Datadog** — full OpenTelemetry spans emitted automatically by `hexr_llm()`, consumed by whatever observability stack you already run.
+
+Your FFIEC, SOC 2, HIPAA, or FedRAMP auditor will ask what your AI agents did, who authorized it, and where the evidence lives. Hexr puts signed, control-mapped evidence rows into your own Postgres — per process, per agent call, any framework. Nothing leaves your VPC.
+
 ---
 
 ## From decorator to production in three commands
@@ -37,63 +49,46 @@ description: "The identity-first runtime platform for AI agents. Deploy secure, 
   </Step>
 </Steps>
 
-## What Hexr gives you — automatically
-
-Every deployed agent gets all of this with zero configuration:
+## What every deployed agent gets — automatically
 
 <CardGroup cols={2}>
-  <Card title="🔐 Cryptographic Identity" icon="fingerprint">
-    Every agent **process** gets a unique SPIFFE X.509 certificate — not just the container. Mutual TLS everywhere. Certificates rotate automatically.
+  <Card title="Per-Process SPIFFE Identity" icon="fingerprint">
+    Every subprocess your agent spawns gets its own X.509 SVID — cryptographically attested by a `hostPID` DaemonSet on the node. Not per pod. Per process. Same mechanism as CrowdStrike Falcon, built for AI agents.
   </Card>
-  <Card title="🔑 Zero-Secret Cloud Access" icon="key">
-    `hexr_tool("aws_s3")` returns an authenticated boto3 client. JWT-SVID → AWS STS / GCP WIF / Azure exchange. Three-tier cache delivers sub-ms latency.
+  <Card title="OPA Policy Enforcement" icon="shield-halved">
+    Every agent action hits OPA before it executes. Rego policies at every service boundary. Fail-closed. Allow or deny logged with the SPIFFE ID of the caller, the policy version, and the mapped compliance control.
   </Card>
-  <Card title="📊 Full Observability" icon="chart-mixed">
-    `hexr_llm()` wraps any LLM client with OpenTelemetry spans. Per-agent cost attribution, token counts, latency histograms — all correlated by SPIFFE identity.
+  <Card title="Signed Evidence Rows" icon="database">
+    Every action writes a signed row to your Postgres — tagged with the SPIFFE ID, timestamp, policy result, and the compliance control it maps to. Your database. Your VPC. Nothing sent to Hexr.
   </Card>
-  <Card title="🔒 Zero-Trust Networking" icon="shield-halved">
-    Envoy sidecar handles all traffic. Every connection is mTLS. OPA policy enforcement at every service boundary. No plaintext, ever.
+  <Card title="Auditor PDF on Demand" icon="file-pdf">
+    `hexr audit` generates a signed PDF from your evidence rows. SOC 2, HIPAA §164.312, NIST 800-53, FedRAMP AU-2, EU AI Act. Every agent action, every control it maps to.
   </Card>
-  <Card title="📡 Agent-to-Agent Protocol" icon="messages">
-    Built-in A2A sidecar with JSON-RPC 2.0. Agent discovery via Agent Cards, task lifecycle, SSE streaming — all authenticated via SPIFFE.
+  <Card title="Zero-Secret Cloud Access" icon="key">
+    `hexr_tool("aws_s3")` returns an authenticated boto3 client. JWT-SVID → AWS STS / GCP WIF / Azure exchange. No long-lived credentials. No rotation.
   </Card>
-  <Card title="🔧 Secure Tool Access" icon="wrench">
-    Import any OpenAPI spec as MCP tools. Gateway handles credential injection from Vault automatically. Sandbox runs code in Firecracker microVMs.
+  <Card title="Agent-to-Agent mTLS" icon="arrows-left-right">
+    A2A sidecar with JSON-RPC 2.0. Both sides validate SPIFFE SVIDs via federated trust bundle. The full delegation chain appears as a single evidence row.
   </Card>
 </CardGroup>
 
 ---
 
-## Choose Your Deployment Model
+## Deployment
 
-Hexr runs the same agent runtime everywhere — the only difference is who manages the infrastructure.
+Hexr runs on your Kubernetes cluster — EKS, GKE Standard, AKS, or on-premises. You own the cluster, the Postgres, and every evidence row. The Hexr Control Plane handles licensing and cluster registration; it never sees your agent evidence or credentials.
 
 <CardGroup cols={2}>
-  <Card
-    title="Hexr Cloud"
-    icon="cloud"
-    href="/cloud/quickstart"
-  >
-    Fully managed SaaS on GKE. Sign up, get an API key, and deploy agents in minutes. 
-    Pay-as-you-go with Hexr Compute Units (HCU).
+  <Card title="Mode A — Hexr-Managed PKI" icon="fingerprint" href="/self-hosted/quickstart">
+    Hexr CP acts as SPIRE UpstreamAuthority. Fastest path to production. Suits teams without an existing PKI. Connected deployment.
   </Card>
-  <Card
-    title="Self-Hosted"
-    icon="server"
-    href="/self-hosted/quickstart"
-  >
-    Deploy Hexr in your own infrastructure with Terraform + Helm. 
-    Air-gapped, on-premises, or private cloud. You own everything.
+  <Card title="Mode B — BYO Vault PKI" icon="lock" href="/self-hosted/quickstart">
+    Your HashiCorp Vault PKI is the intermediate CA. Hexr CP is the upstream authority. Required for HIPAA BAA scope, FedRAMP IL5, or any deployment where your security team controls the root.
   </Card>
 </CardGroup>
 
-<Card
-  title="Hybrid Cloud (Coming Soon)"
-  icon="cloud-arrow-up"
-  color="#94a3b8"
->
-  Your agents run in your infrastructure. Hexr manages the control plane. 
-  SPIFFE federation bridges the trust boundary. Best of both worlds.
+<Card title="Air-Gapped" icon="shield-halved" href="/self-hosted/air-gapped">
+  Zero outbound connectivity. All images pre-loaded. No `api.hexr.cloud` egress required. Required for FedRAMP IL5, ITAR, CMMC L3 — or any environment where the security team must approve every network path.
 </Card>
 
 ---
@@ -115,8 +110,8 @@ Write agents with any Python framework. Hexr detects and adapts automatically.
   <Card title="Strands Agents" icon="dna">
     AWS-native agent framework with tool decorators.
   </Card>
-  <Card title="OpenAI Swarm" icon="bees">
-    Lightweight multi-agent handoffs.
+  <Card title="Google ADK" icon="google">
+    Google Agent Development Kit.
   </Card>
   <Card title="Pure Python" icon="python">
     No framework needed. Just `@hexr_agent` and go.
@@ -125,13 +120,30 @@ Write agents with any Python framework. Hexr detects and adapts automatically.
 
 ---
 
+## Who Hexr is for
+
+| Buyer | Compliance Pain | Hexr Answer |
+|---|---|---|
+| Multi-cloud finserv (hedge funds, banks) | FFIEC, SEC, FINRA — per-process attestation | Per-process SPIFFE + signed evidence rows in customer Postgres |
+| Regulated healthcare | HIPAA §164.312 — PHI access audit trail | BYO Vault PKI (Mode B), evidence stays in customer VPC, zero Microsoft/AWS/GCP cloud involvement |
+| Defense / govtech | FedRAMP IL5, ITAR, CMMC L3 — no SaaS vendors | Air-gapped Helm chart, no internet egress, customer-owned trust root |
+| AmLaw 100 + Big-4 audit firms | Client data cannot leave jurisdiction | Cross-cluster A2A mTLS, federated SPIFFE, full delegation chain in evidence |
+
+---
+
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="Architecture Deep Dive" icon="sitemap" href="/architecture/overview">
-    Understand the 5-layer platform stack and how identity flows through every component.
+  <Card title="Deploy on Your Cluster" icon="server" href="/self-hosted/quickstart">
+    Helm + Terraform quickstart for EKS, GKE, or AKS. Running in under an hour.
   </Card>
-  <Card title="Write Your First Agent" icon="rocket" href="/guides/first-agent">
-    15-minute tutorial: from Python function to deployed, observable agent.
+  <Card title="Architecture Deep Dive" icon="sitemap" href="/architecture/overview">
+    How identity flows: SPIRE → SVID → OPA → evidence row → auditor PDF.
+  </Card>
+  <Card title="Security & Compliance" icon="shield-halved" href="/security/overview">
+    SPIFFE identity model, OPA policies, FFIEC/HIPAA/FedRAMP control mapping.
+  </Card>
+  <Card title="Book an Auditor Demo" icon="calendar" href="https://hexr.dev#cta">
+    15-minute walkthrough: OPA deny, evidence row, signed PDF. Live cluster.
   </Card>
 </CardGroup>
