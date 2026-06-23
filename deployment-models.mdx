@@ -1,21 +1,15 @@
 ---
 title: "Deployment Models"
-description: "Hexr runs on your Kubernetes cluster. You own the cluster, the Postgres, and every evidence row. Choose how your PKI is rooted."
+description: "Hexr runs entirely in your Kubernetes cluster. Your data never leaves your infrastructure — choose how you want to root your PKI."
 ---
 
-## The One Invariant
+## Your cluster. Your data.
 
-**Your data plane never leaves your infrastructure.** Agent pods, evidence Postgres, SPIRE Server, OPA, Vault — all run in your cluster. The Hexr Control Plane handles licensing, cluster registration, and fleet health. It never sees agent evidence, credentials, or PII.
+Hexr is not a SaaS platform you send data to. Everything — agent pods, evidence Postgres, policy engine, identity server — runs inside your own Kubernetes cluster. You deploy it with Helm. You own the storage. Your auditors can point at your own infrastructure.
 
-The only Hexr-operated endpoint your cluster calls: `api.hexr.cloud/v1/heartbeat` — 5 signed scalars every 60 seconds (`cluster_id`, `agent_count`, `evidence_row_count_24h`, `license_id`, `version`). That is the complete network surface.
+The only thing Hexr operates is a lightweight licensing endpoint: `api.hexr.cloud/v1/heartbeat`. Your cluster sends 5 small integers to it every 60 seconds (agent count, evidence row count, license ID, version). That is the complete outbound surface. No evidence, no credentials, no PII ever leaves your VPC.
 
----
-
-## Route B — Self-Hosted Kubernetes
-
-All public deployments use Route B. Your cluster. Your Postgres. Your trust root.
-
-Works on: **AWS EKS · GCP GKE Standard · Azure AKS · on-premises K8s**
+Hexr runs on **AWS EKS · GCP GKE · Azure AKS · on-premises Kubernetes**.
 
 ```bash
 helm install hexr-runtime hexr/hexr-runtime \
@@ -25,78 +19,77 @@ helm install hexr-runtime hexr/hexr-runtime \
 
 ---
 
-## PKI Mode — How Your Cluster Gets Its Trust Root
+## Choosing how to root your PKI
 
-The difference between modes is who signs the intermediate CA certificate inside your cluster. Agent code, Helm chart, and SDK are identical across all modes.
+The only meaningful choice in a Hexr deployment is **who signs the intermediate CA certificate** inside your cluster. Everything else — agent code, Helm chart, SDK, evidence schema — is identical regardless.
 
 <CardGroup cols={2}>
-  <Card title="Mode A — Hexr-Managed PKI" icon="fingerprint">
-    Hexr Control Plane acts as SPIRE `UpstreamAuthority`. Your cluster's SPIRE Server is issued an intermediate CA certificate signed by Hexr's root. Fastest path to production. No PKI infrastructure required on your side.
+  <Card title="Hexr-managed PKI" icon="fingerprint">
+    Hexr's control plane acts as the upstream certificate authority. Your cluster's SPIRE Server gets an intermediate CA signed by Hexr's root. Nothing to configure on your side.
 
-    **Suited for:** Teams without an existing PKI. Connected deployment with `api.hexr.cloud` reachable.
+    **Good fit for:** Teams without an existing PKI who want to be in production quickly. Requires outbound access to `api.hexr.cloud`.
   </Card>
-  <Card title="Mode B — BYO Vault PKI" icon="lock">
-    Your HashiCorp Vault PKI backend is the intermediate CA. Hexr CP acts as the upstream authority above Vault. Your AKS/EKS cluster runs a nested SPIRE Server. Per-process SVIDs are minted locally — evidence stays in your VPC.
+  <Card title="Bring your own Vault PKI" icon="lock">
+    Your HashiCorp Vault PKI backend becomes the intermediate CA. Per-process identities are minted entirely inside your VPC — Hexr's control plane never touches your signing root.
 
-    **Suited for:** HIPAA BAA scope, FedRAMP IL5, any deployment where your security team controls the signing root. Required for Ring 2 (healthcare) and Ring 3 (defense/govtech) buyers.
+    **Good fit for:** Healthcare (HIPAA BAA), financial services, or any deployment where your security team owns the signing chain.
   </Card>
 </CardGroup>
 
-<Card title="Mode C — Fully Air-Gapped" icon="shield-halved" href="/self-hosted/air-gapped">
-  Zero outbound connectivity. No `api.hexr.cloud` egress. All container images pre-loaded from your internal registry. Customer-owned root CA, no Hexr CP involvement in PKI. License validated offline via JWT. Required for FedRAMP IL5, ITAR, CMMC L3, or environments with network egress controls.
+<Card title="Fully air-gapped" icon="shield-halved" href="/self-hosted/air-gapped">
+  No outbound connectivity at all — not even the heartbeat. Container images are pre-loaded from your internal registry. License is validated offline via JWT. Your root CA, your network, zero Hexr egress.
+
+  **Required for:** FedRAMP IL5, ITAR, CMMC Level 3, or any environment with strict network egress controls.
 </Card>
 
 ---
 
 ## Comparison
 
-| | Mode A | Mode B | Mode C (Air-Gapped) |
+| | Hexr-managed PKI | BYO Vault PKI | Air-gapped |
 |---|---|---|---|
-| **Infrastructure** | Your K8s cluster | Your K8s cluster + HashiCorp Vault | Your K8s cluster, isolated network |
-| **PKI root** | Hexr CP intermediate CA | Your Vault PKI | Your root CA |
-| **SPIRE topology** | Single SPIRE Server | Nested SPIRE (CP upstream → Vault CA → cluster SPIRE) | Standalone SPIRE |
-| **`api.hexr.cloud` egress** | Required (heartbeat) | Required (heartbeat) | ❌ None |
-| **Evidence location** | Customer Postgres | Customer Postgres | Customer Postgres |
-| **HIPAA BAA** | ✅ | ✅ (zero cloud CA involvement) | ✅ |
+| **Who signs the intermediate CA** | Hexr | Your HashiCorp Vault | Your root CA |
+| **Outbound to `api.hexr.cloud`** | Heartbeat only | Heartbeat only | ❌ None |
+| **Evidence location** | Your Postgres | Your Postgres | Your Postgres |
+| **HIPAA BAA** | ✅ | ✅ | ✅ |
 | **FedRAMP IL5 / CMMC L3** | Case-by-case | ✅ | ✅ |
-| **Setup time** | ~1 hour | ~2 hours | ~4 hours |
-| **License** | Enterprise | Enterprise | Enterprise (air-gap add-on) |
+| **Typical setup time** | ~1 hour | ~2 hours | ~4 hours |
 
 ---
 
-## What Deploys Into Your Cluster
+## What deploys into your cluster
 
-Every mode deploys the same Helm chart into `hexr-system`:
+Every deployment installs the same Helm chart into the `hexr-system` namespace:
 
-| Component | Purpose |
+| Component | What it does |
 |---|---|
-| **SPIRE Server + Agent** | Per-process SVID issuance |
-| **hostPID DaemonSet** | Attests every subprocess on every node |
-| **Auto-Registrar** | Watches for pods with `hexr.io/*` labels, creates SPIRE entries |
-| **Credential Injector** | JWT-SVID → AWS STS / GCP WIF / Azure exchange |
-| **Hexr Vault** | SPIFFE-native secret storage (AES-256-GCM, customer Postgres) |
-| **Gateway** | OpenAPI → MCP tool adapter, credential injection |
-| **A2A Sidecar** | JSON-RPC 2.0 agent-to-agent protocol with SPIFFE mTLS |
-| **Evidence API** | Writes signed evidence rows to customer Postgres |
-| **OPA** | Policy enforcement sidecar — fail-closed, per-process |
-| **OTel Collector** | Telemetry pipeline → your Prometheus / Jaeger |
+| **SPIRE Server + Agent** | Issues per-process cryptographic identities (SVIDs) |
+| **DaemonSet (hostPID)** | Attests every subprocess on every node — not just pods |
+| **Auto-Registrar** | Watches for pods labeled `hexr.io/*`, creates SPIRE entries automatically |
+| **Credential Injector** | Exchanges a process SVID for real cloud credentials (AWS STS, GCP WIF, Azure) |
+| **Hexr Vault** | Secret storage backed by your Postgres, encrypted per-SVID |
+| **Gateway** | OpenAPI → MCP adapter with credential injection |
+| **A2A Sidecar** | Agent-to-agent communication over SPIFFE mTLS |
+| **Evidence API** | Writes signed, control-mapped evidence rows to your Postgres |
+| **OPA** | Policy sidecar — fail-closed, evaluated per process per call |
+| **OTel Collector** | Feeds your existing Prometheus / Jaeger / Grafana stack |
 | **Envoy** | mTLS sidecar in every agent pod |
 
 ---
 
-## Next Steps
+## Next steps
 
 <CardGroup cols={2}>
   <Card title="Self-Hosted Quickstart" icon="server" href="/self-hosted/quickstart">
-    Mode A deployment on EKS, GKE, or AKS in under an hour.
+    Up and running on EKS, GKE, or AKS in under an hour.
   </Card>
-  <Card title="BYO Vault (Mode B)" icon="lock" href="/self-hosted/helm">
-    Configure your HashiCorp Vault PKI as the intermediate CA.
+  <Card title="BYO Vault Setup" icon="lock" href="/self-hosted/helm">
+    Configure HashiCorp Vault as your intermediate CA.
   </Card>
-  <Card title="Air-Gapped (Mode C)" icon="shield-halved" href="/self-hosted/air-gapped">
-    Zero-egress deployment guide for FedRAMP / CMMC environments.
+  <Card title="Air-Gapped Guide" icon="shield-halved" href="/self-hosted/air-gapped">
+    Zero-egress deployment for FedRAMP and CMMC environments.
   </Card>
   <Card title="Book an Auditor Demo" icon="calendar" href="https://hexr.dev#cta">
-    See Mode B running live on AKS with BYO Vault and nested SPIRE.
+    See Hexr running live with BYO Vault on AKS.
   </Card>
 </CardGroup>
