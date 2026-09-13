@@ -36,24 +36,28 @@ The only meaningful choice in a Hexr deployment is **who signs the intermediate 
   </Card>
 </CardGroup>
 
-<Card title="Fully air-gapped" icon="shield-halved" href="/self-hosted/air-gapped">
-  No outbound connectivity at all — not even the heartbeat. Container images are pre-loaded from your internal registry. License is validated offline via JWT. Your root CA, your network, zero Hexr egress.
-
-  **Required for:** FedRAMP IL5, ITAR, CMMC Level 3, or any environment with strict network egress controls.
-</Card>
+<Note>
+  **Air-gapped operation is on the roadmap, not generally available.** The chart
+  supports `cloud.enabled=false` and an offline license, but in-cluster
+  signature-pack delivery is not yet built, so an air-gapped cluster cannot
+  receive framework-signature updates. If you need a fully disconnected
+  deployment for FedRAMP IL5, ITAR or CMMC Level 3, [talk to us](https://hexr.dev#cta)
+  and we will scope it with you rather than point you at a guide.
+</Note>
 
 ---
 
 ## Comparison
 
-| | Hexr-managed PKI | BYO Vault PKI | Air-gapped |
-|---|---|---|---|
-| **Who signs the intermediate CA** | Hexr | Your HashiCorp Vault | Your root CA |
-| **Outbound to `api.hexr.cloud`** | Heartbeat only | Heartbeat only | ❌ None |
-| **Evidence location** | Your Postgres | Your Postgres | Your Postgres |
-| **HIPAA BAA** | ✅ | ✅ | ✅ |
-| **FedRAMP IL5 / CMMC L3** | Case-by-case | ✅ | ✅ |
-| **Typical setup time** | ~1 hour | ~2 hours | ~4 hours |
+| | Hexr-managed PKI | BYO Vault PKI |
+|---|---|---|
+| **Who signs the intermediate CA** | Hexr | Your HashiCorp Vault |
+| **Outbound to `api.hexr.cloud`** | Heartbeat only (5 integers / 60s) | Heartbeat only (5 integers / 60s) |
+| **Evidence location** | Your Postgres, your cluster | Your Postgres, your cluster |
+| **Signing root ever touched by Hexr** | Yes, we sign your intermediate | ❌ Never |
+| **HIPAA BAA** | ✅ | ✅ |
+| **Signature-pack updates** | ✅ automatic | ✅ automatic |
+| **Typical setup time** | ~1 hour | ~2 hours |
 
 ---
 
@@ -86,8 +90,8 @@ Every deployment installs the same Helm chart into the `hexr-system` namespace:
   <Card title="BYO Vault Setup" icon="lock" href="/self-hosted/helm">
     Configure HashiCorp Vault as your intermediate CA.
   </Card>
-  <Card title="Air-Gapped Guide" icon="shield-halved" href="/self-hosted/air-gapped">
-    Zero-egress deployment for FedRAMP and CMMC environments.
+  <Card title="Per-Process Identity" icon="fingerprint" href="/architecture/per-process-identity">
+    How every agent and sub-agent gets its own attested SPIFFE ID.
   </Card>
   <Card title="Book an Auditor Demo" icon="calendar" href="https://hexr.dev#cta">
     See Hexr running live with BYO Vault on AKS.

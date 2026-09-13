@@ -1,12 +1,32 @@
 ---
 title: "Air-Gapped Deployment"
 sidebarTitle: "Air-Gapped"
-description: "Deploy Hexr in fully disconnected environments with no internet access."
+description: "Roadmap: fully disconnected deployment. Talk to us before planning around it."
 ---
+
+<Warning>
+  **Roadmap, not generally available.** This page describes the intended design.
+  Do not plan a deployment around it without talking to us first.
+
+  What exists today: the Helm chart accepts `cloud.enabled=false` and an offline
+  license file, so the data plane can run without reaching `api.hexr.cloud`.
+
+  What does not exist yet: **in-cluster delivery of framework signature packs.**
+  Signature updates are fetched over HTTPS from `signatures.hexr.cloud`, and the
+  offline path for them is designed but not built. An air-gapped cluster would
+  therefore be frozen on whichever packs shipped in its SDK wheel, and would not
+  pick up support for new agent frameworks or updated detection rules.
+
+  If you need a disconnected deployment, [contact us](https://hexr.dev#cta) and
+  we will scope it properly rather than hand you a guide that stops halfway.
+</Warning>
 
 ## Overview
 
-Hexr supports fully air-gapped deployment for classified environments, FedRAMP, and strict compliance requirements. All components run without any external network access.
+Hexr is designed to support fully air-gapped deployment for classified
+environments, FedRAMP, and strict compliance requirements. The intent is that
+all components run without any external network access. See the warning above
+for what is and is not built today.
 
 ---
 
