@@ -1,0 +1,38 @@
+---
+title: "hexr init"
+description: "Generate a hexr.yaml skeleton for a new project."
+---
+
+```bash
+hexr init --tenant acme-bank
+```
+
+Writes a `hexr.yaml` with the fields a project needs, commented, so the first
+thing you do is not guess at schema.
+
+## Options
+
+<ResponseField name="--tenant, -t TEXT" type="string" required>
+Tenant identifier, e.g. `acme-bank`. Required, and deliberately so — a tenant
+is not something to default, because the wrong value produces identities in
+the wrong trust domain.
+</ResponseField>
+
+<ResponseField name="--route [kubernetes|managed]" type="string" default="kubernetes">
+Default deploy route. `kubernetes` deploys into your own cluster; `managed`
+targets Hexr Cloud.
+</ResponseField>
+
+<ResponseField name="--output, -o PATH" type="path" default="hexr.yaml">
+Where to write the skeleton.
+</ResponseField>
+
+<ResponseField name="--force" type="flag">
+Overwrite an existing file. Without it, `hexr init` refuses rather than
+silently replacing configuration you may have edited.
+</ResponseField>
+
+## Related
+
+- [hexr build](/cli/build) — reads this file
+- [hexr cluster](/cli/cluster) — registers the cluster you deploy into

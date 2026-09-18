@@ -1,0 +1,135 @@
+---
+title: "Evidence verification"
+description: "Two independent properties — the chain was not altered, and the rows were signed by the process that wrote them."
+---
+
+Evidence is only worth having if someone can check it. Hexr's evidence store
+answers two **independent** questions, and conflating them is the most common
+way to overstate what an audit trail proves.
+
+```bash
+curl "$EVIDENCE_API/v1/evidence/verify?tenant_id=acme&period=24h"
+```
+
+```json
+{
+  "intact": true,
+  "rows_checked": 11,
+  "signed_rows": 7,
+  "signature_valid_rows": 7,
+  "signature_invalid_rows": 0,
+  "signature_unverifiable_rows": 0,
+  "unchained_rows": 42,
+  "trust_bundle_configured": true
+}
+```
+
+## The two properties
+
+<CardGroup cols={2}>
+<Card title="intact — sequence" icon="link">
+Each row carries a digest over its own content and the previous row's digest.
+`intact: true` means the **sequence was not altered after it was written**.
+
+It says nothing about who wrote it.
+</Card>
+
+<Card title="signature_valid_rows — authorship" icon="signature">
+Each signed row carries a signature made **inside the process**, with that
+process's SVID private key.
+
+`signature_valid_rows` counts rows whose signature verifies and whose
+certificate chains to the SPIFFE trust root.
+</Card>
+</CardGroup>
+
+The endpoint says this itself, in the response:
+
+> `intact` proves the SEQUENCE was not altered after it was written; it does
+> not prove authorship. `signature_valid_rows` proves AUTHORSHIP: those rows
+> were signed inside a SPIRE-attested process and the signature chains to the
+> SPIFFE trust root. The two are independent — a chain can be intact and
+> unsigned, or signed and broken.
+
+A chain can be perfectly intact and entirely unsigned. That is still useful —
+it proves nobody edited history — but it is not proof that a particular agent
+did a particular thing.
+
+## Reading the fields
+
+<ResponseField name="intact" type="boolean">
+The hash chain holds. If `false`, `break_at_index` and `break_at_row_id` name
+the exact row where it stops.
+</ResponseField>
+
+<ResponseField name="signed_rows" type="integer">
+Rows carrying a signature at all.
+</ResponseField>
+
+<ResponseField name="signature_valid_rows" type="integer">
+Rows whose signature verifies against the configured trust bundle. **This is
+the number that matters for authorship.**
+</ResponseField>
+
+<ResponseField name="signature_invalid_rows" type="integer">
+Signed, but the signature does not verify. Any non-zero value here is serious
+and should be investigated before anything else.
+</ResponseField>
+
+<ResponseField name="signature_unverifiable_rows" type="integer">
+Signed, but the certificate does not chain to the configured trust bundle —
+typically a row written under a trust domain the verifier does not have. Not
+the same as invalid: the signature may be perfectly good and simply
+unattributable here.
+</ResponseField>
+
+<ResponseField name="unchained_rows" type="integer">
+Rows outside the hash chain, usually predating chaining being enabled. They
+are not evidence of tampering; they are evidence of age.
+</ResponseField>
+
+<ResponseField name="trust_bundle_configured" type="boolean">
+Whether the store has a trust bundle at all. **If this is `false`, every
+signature result is meaningless** — the store cannot verify anything.
+</ResponseField>
+
+## The store rejects what it cannot verify
+
+A row whose signature does not chain to the configured trust bundle is
+**refused at write time**:
+
+```
+400 signature verification failed: SVID does not chain to the
+    configured trust bundle: x509: certificate signed by unknown authority
+```
+
+This is deliberate. An evidence store that accepts unverifiable evidence is a
+log file with extra steps.
+
+<Note>
+The most common cause is a trust bundle that has not caught up with a trust
+domain change. The evidence store caches its bundle at start, so after
+re-pointing a data plane at a different root, restart the evidence API before
+expecting signed rows to land.
+</Note>
+
+## What a signed row does not prove
+
+Worth stating before an auditor asks.
+
+- It proves **which process** made the call — not that the call was *correct*,
+  *authorised by a human*, or *a good idea*.
+- It proves the row was written **inside an attested process** — not that the
+  process was uncompromised. A compromised agent signs its own actions
+  perfectly well. What you gain is that those actions are attributable and
+  bounded, not that they were prevented.
+- Absence of a row is **not** proof that nothing happened. A process with no
+  identity writes no evidence — which is precisely why discovering
+  uninstrumented processes is a separate control. See
+  [Per-process identity](/architecture/per-process-identity).
+
+## Related
+
+- [Per-process identity](/architecture/per-process-identity)
+- [Multi-tenancy](/architecture/multi-tenancy) — why a row may be unverifiable in one tenant and valid in another
+- [Compliance frameworks](/security/compliance-frameworks)

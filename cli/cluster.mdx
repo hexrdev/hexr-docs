@@ -1,0 +1,48 @@
+---
+title: "hexr cluster"
+description: "Register a Kubernetes cluster with Hexr Cloud and inspect its registration."
+---
+
+A cluster has to be registered before the control plane will accept its
+heartbeats or issue it a tenant trust domain.
+
+```bash
+hexr cluster register
+hexr cluster list
+hexr cluster status
+```
+
+## Commands
+
+<ResponseField name="register" type="command">
+Register a Kubernetes cluster with Hexr Cloud. Issues the `license_id` and
+`cluster_id` pair that the in-cluster license agent uses to identify itself.
+</ResponseField>
+
+<ResponseField name="list" type="command">
+List clusters registered under the current tenant, as the control plane sees
+them.
+</ResponseField>
+
+<ResponseField name="status" type="command">
+Show locally-stored registration state — what *this machine* believes, which
+is not always what the control plane believes. When those disagree, `list` is
+authoritative.
+</ResponseField>
+
+## What registration enables
+
+Once registered, the in-cluster license agent heartbeats every 60 seconds with
+the cluster's agent count, SPIRE server and agent readiness, and evidence rows
+written in the last 24 hours.
+
+<Note>
+Those heartbeats carry a **health verdict**, not just counts. A cluster whose
+identity plane is down reports unhealthy and says why, rather than reporting
+numbers that a reader has to interpret.
+</Note>
+
+## Related
+
+- [hexr init](/cli/init) — project scaffold
+- [hexr deploy](/cli/deploy) — deploy into a registered cluster

@@ -1,0 +1,69 @@
+---
+title: "hexr analyze"
+description: "Statically analyze a Python project for agent frameworks and patterns — no execution, no network."
+---
+
+`hexr analyze` reads a Python project and reports which agent frameworks it
+uses and which patterns it exhibits. It is **static**: nothing is imported,
+nothing is executed, and no network call is made.
+
+```bash
+hexr analyze .
+```
+
+That matters because the alternative — importing a codebase to see what it
+does — runs arbitrary code from the project you are trying to assess.
+
+## What it detects
+
+- **Frameworks** — CrewAI, LangChain, LangGraph, AutoGen, ADK and others,
+  from the call shapes they produce rather than from `requirements.txt`, which
+  lists what is installed rather than what is used.
+- **Patterns** — orchestrator/worker, routing, parallelisation, and the other
+  shapes that determine how many identities an agent pod actually needs.
+
+The same classification drives `hexr build`, so what you see here is what the
+build will act on.
+
+## Options
+
+<ResponseField name="--json" type="flag">
+Emit the raw manifest. Use this in CI, where the human-readable table is
+harder to assert on.
+</ResponseField>
+
+<ResponseField name="--pack-dir PATH" type="path">
+Override the framework pack directory. Defaults to the packs shipped in the
+SDK; see [hexr update](/cli/update) for keeping those current.
+</ResponseField>
+
+<ResponseField name="--pattern-dir PATH" type="path">
+Override the pattern pack directory.
+</ResponseField>
+
+<ResponseField name="--suggest" type="flag">
+Propose framework rules for call sites the packs did not classify.
+
+Writes an **advisory YAML diff for human review** and never mutates
+classification. A tool that silently invented its own rules would make every
+later classification unauditable.
+
+Requires the enterprise extra:
+
+```bash
+pip install 'hexr-sdk[enterprise]'
+```
+</ResponseField>
+
+## Reading unclassified call sites
+
+Unclassified is a normal result, not a failure. It means the call shape does
+not match a known framework — which is exactly what a bespoke agent looks like.
+
+`--suggest` is for when you have enough of them to be worth a rule. The output
+is a diff you apply deliberately, not a change it makes for you.
+
+## Related
+
+- [hexr build](/cli/build) — acts on this classification
+- [hexr update](/cli/update) — refreshes the packs
