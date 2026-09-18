@@ -1,0 +1,95 @@
+---
+title: "hexr update"
+description: "Update SDK assets that ship outside the wheel — signature packs and their provenance."
+---
+
+Some SDK assets change faster than releases do. Framework signature packs are
+the main one: new agent frameworks appear, existing ones change their call
+shapes, and waiting for a wheel release to recognise them would make
+`hexr analyze` stale by design.
+
+`hexr update` fetches those assets, and **verifies them before installing**.
+
+```bash
+hexr update signatures
+```
+
+## Why the verification matters more than the update
+
+A signature pack tells `hexr build` and `hexr analyze` what an agent framework
+looks like. Anything that can rewrite those files can change what Hexr
+recognises — and quietly *stop* recognising something is the failure you would
+never notice.
+
+So the feed is signed with [Sigstore](https://www.sigstore.dev/) keyless
+signing, and `hexr update` verifies:
+
+- the **signature** chains to Sigstore's trust root
+- the **certificate identity** matches the expected workflow that publishes it
+- the **Rekor transparency log** entry exists
+
+If any of those fail, nothing is written. A pack that cannot prove where it
+came from does not get installed.
+
+<Warning>
+Verification requires the `ops` extra:
+
+```bash
+pip install 'hexr-sdk[ops]'
+```
+
+It is kept out of the default install so agent pods do not carry `sigstore`,
+`cryptography` and their dependencies. Install it on developer, CI and
+operator machines — the ones that actually run this command.
+</Warning>
+
+## Commands
+
+<ResponseField name="hexr update signatures" type="command">
+Fetch and verify the current signature pack from the signed feed, then install
+it into the SDK's pack directory.
+
+```bash
+hexr update signatures
+```
+</ResponseField>
+
+## Checking what you have
+
+```bash
+hexr analyze . --json | head -20
+```
+
+The manifest records which pack version classified each call site, so a
+surprising classification can be traced to the pack that produced it.
+
+## When it fails
+
+<AccordionGroup>
+<Accordion title="Did not find one Rekor key in trusted root">
+The installed `sigstore` is too old for Sigstore's current trust root. Upgrade:
+
+```bash
+pip install --upgrade 'hexr-sdk[ops]'
+```
+
+Versions below 4.5.0 cannot verify against the current root and exit non-zero
+on every attempt.
+</Accordion>
+
+<Accordion title="No module named 'sigstore'">
+The `ops` extra is not installed. See the warning above — this is deliberate,
+not a packaging bug.
+</Accordion>
+
+<Accordion title="Signature verification failed">
+Do not work around this. It means the pack you were served does not match what
+the publishing workflow signed. Re-run once in case of a partial download; if
+it persists, report it rather than bypassing it.
+</Accordion>
+</AccordionGroup>
+
+## Related
+
+- [hexr analyze](/cli/analyze) — consumes the packs this installs
+- [hexr build](/cli/build) — uses the same classification

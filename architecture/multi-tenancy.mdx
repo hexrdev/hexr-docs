@@ -1,0 +1,136 @@
+---
+title: "Multi-tenancy"
+description: "Per-tenant trust domains and per-tenant root CAs — isolation you can verify yourself, not a filter you have to trust."
+---
+
+Hexr isolates tenants with **a separate trust domain and a separate root CA per
+tenant**. Not a label. Not a namespace filter. Not a `WHERE tenant_id = ?`.
+
+The difference matters because of what happens when someone tests it. A filter
+is code, and code has bugs. A separate trust anchor has no code path that could
+accidentally accept the wrong tenant — there is nothing shared to misconfigure.
+
+## What "shared root" looks like, and why it is not enough
+
+A common arrangement gives every tenant a path prefix inside one trust domain:
+
+```
+spiffe://agents.example.com/downstream/tenant-a/...
+spiffe://agents.example.com/downstream/tenant-b/...
+```
+
+That reads like isolation. It is not. Both chain to **the same root**, so an
+SVID minted for tenant A verifies perfectly well against tenant B's trust
+bundle. Whatever keeps them apart is authorisation logic somewhere above the
+cryptography — and a security reviewer will find that in about a minute.
+
+## What Hexr does instead
+
+Each tenant gets its own trust domain and its own root:
+
+```
+Tenant A   spiffe://agents.example.com/...
+           root: CN=Example Root CA 2026        E8:E6:77:6D:91:26:...
+
+Tenant B   spiffe://tenant-b.agents.example.com/...
+           root: CN=Example Root CA Tenant B    74:C8:C4:CA:7B:AB:...
+```
+
+Different domains, different keys, no shared bundle. An SVID from one is not
+*denied* by the other — it is **unverifiable**, because the chain ends at a
+certificate the other side has never seen.
+
+<Note>
+Both roots are issued and operated by Hexr's control plane, so a tenant still
+does no SPIRE work. The separation is in the PKI, not in the customer's
+operational burden.
+</Note>
+
+## Verify it yourself
+
+Do not take this on trust — that would rather defeat the point. Mint an SVID in
+each trust domain and cross-verify.
+
+<Steps>
+<Step title="Get each tenant's trust bundle">
+```bash
+spire-server bundle show -socketPath /tmp/spire-server/private/api.sock \
+  > tenant-a-bundle.pem
+# repeat against tenant B's server
+```
+</Step>
+
+<Step title="Mint one SVID per trust domain">
+```bash
+spire-server x509 mint \
+  -socketPath /tmp/spire-server/private/api.sock \
+  -spiffeID spiffe://agents.example.com/probe -ttl 10m \
+  | sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' > tenant-a-chain.pem
+```
+</Step>
+
+<Step title="Cross-verify — two must pass, two must fail">
+```bash
+# own root: expect OK
+openssl verify -CAfile tenant-a-bundle.pem \
+  -untrusted a-2.pem -untrusted a-3.pem a-1.pem
+
+# the other tenant's root: expect failure
+openssl verify -CAfile tenant-b-bundle.pem \
+  -untrusted a-2.pem -untrusted a-3.pem a-1.pem
+```
+
+The second produces:
+
+```
+error 19 at 2 depth lookup: self-signed certificate in certificate chain
+error a-1.pem: verification failed
+```
+
+That error is the point. The chain terminates at a root the verifier has never
+heard of.
+</Step>
+</Steps>
+
+## It is re-checked on a schedule
+
+A property proven once and never re-checked is not a property, it is a memory.
+The control plane runs this cross-verification **hourly** as a Kubernetes
+CronJob and fails loudly if it ever stops holding.
+
+The check also validates its own preconditions before forming a verdict — that
+its tooling is present, that artefacts are non-empty, and that every SVID
+verifies against its *own* root — and reports "isolation NOT assessed"
+separately from "isolation failed". A check that cannot tell *"the answer is
+no"* from *"I could not ask"* is worse than no check, because it burns the one
+signal you were relying on.
+
+## What this does and does not give you
+
+<CardGroup cols={2}>
+<Card title="Isolation you can test" icon="circle-check">
+Cross-tenant verification fails cryptographically, in a way a reviewer can
+reproduce on their own laptop in two minutes.
+</Card>
+
+<Card title="Independent compromise blast radius" icon="circle-check">
+A compromised root affects one tenant. There is no shared key whose loss
+affects everyone.
+</Card>
+
+<Card title="Not data isolation on its own" icon="circle-minus">
+Separate trust domains isolate *identity*. Database and storage separation are
+distinct controls; see [Threat model](/security/threat-model).
+</Card>
+
+<Card title="Not free of operational cost" icon="circle-minus">
+Each tenant is a real root CA with a real lifecycle. Hexr carries that, which
+is the service — but it is work being done, not work eliminated.
+</Card>
+</CardGroup>
+
+## Related
+
+- [Per-process identity](/architecture/per-process-identity) — what happens *inside* a tenant
+- [SPIFFE identity](/security/spiffe-identity) — the identity format itself
+- [Threat model](/security/threat-model) — what this defends and what it does not

@@ -1,0 +1,43 @@
+---
+title: "hexr delete"
+description: "Delete a deployed agent and all of its Kubernetes resources."
+---
+
+```bash
+hexr delete content-creation-crew --namespace tenant-demo
+```
+
+Removes the pods, services, configmaps, service accounts, roles and role
+bindings matching the agent name.
+
+## Options
+
+<ResponseField name="--namespace TEXT" type="string">
+Namespace to delete from.
+</ResponseField>
+
+<ResponseField name="--cloud" type="flag">
+Delete via the Hexr Cloud API instead of directly against the cluster.
+Requires `hexr login` first.
+</ResponseField>
+
+<ResponseField name="--tenant TEXT" type="string">
+Target tenant when deleting through the cloud API.
+</ResponseField>
+
+## What it does not delete
+
+<Warning>
+**Evidence rows are not removed.** They are the audit trail, they live in your
+cluster's evidence store, and deleting an agent is not a reason to lose the
+record of what it did.
+
+SPIRE registration entries for the agent's processes also persist until they
+expire or are removed deliberately. An entry with no running process issues
+nothing, so it is inert — but it is still visible, which is the right default
+for anything identity-related.
+</Warning>
+
+## Related
+
+- [hexr deploy](/cli/deploy)

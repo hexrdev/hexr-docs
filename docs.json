@@ -24,8 +24,14 @@
   },
   "navbar": {
     "links": [
-      { "label": "Status", "href": "https://status.hexr.cloud" },
-      { "label": "GitHub", "href": "https://github.com/hexrdev" }
+      {
+        "label": "Status",
+        "href": "https://status.hexr.cloud"
+      },
+      {
+        "label": "GitHub",
+        "href": "https://github.com/hexrdev"
+      }
     ],
     "primary": {
       "type": "button",
@@ -61,6 +67,7 @@
               "architecture/five-layers",
               "architecture/agent-pod",
               "architecture/per-process-identity",
+              "architecture/multi-tenancy",
               "architecture/credential-exchange",
               "architecture/observability"
             ]
@@ -70,6 +77,7 @@
             "pages": [
               "security/overview",
               "security/spiffe-identity",
+              "security/evidence-verification",
               "security/opa-policies",
               "security/threat-model",
               "security/threat-chains",
@@ -124,11 +132,16 @@
             "group": "Commands",
             "pages": [
               "cli/build",
+              "cli/analyze",
+              "cli/init",
+              "cli/cluster",
               "cli/push",
               "cli/deploy",
+              "cli/delete",
               "cli/audit",
               "cli/login",
               "cli/status",
+              "cli/update",
               "cli/cache"
             ]
           }
