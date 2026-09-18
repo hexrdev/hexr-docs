@@ -49,6 +49,21 @@ Your FFIEC, SOC 2, HIPAA, or FedRAMP auditor will ask what your AI agents did, w
   </Step>
 </Steps>
 
+## The claim, and how to break it
+
+Hexr identifies the **process**. A gateway can only identify the connection.
+
+That distinction is the whole product, and it is testable rather than
+rhetorical: a process that was never decorated with `@hexr_agent` writes no
+context file, so the attestor emits no selectors for its PID, so SPIRE issues
+it nothing. It runs perfectly well and it is **nobody** — no identity, and no
+evidence it can sign.
+
+That is not a policy you could misconfigure off. There is nothing for SPIRE to
+match. [How identity is actually issued →](/architecture/per-process-identity)
+
+---
+
 ## What every deployed agent gets — automatically
 
 <CardGroup cols={2}>
@@ -69,6 +84,12 @@ Your FFIEC, SOC 2, HIPAA, or FedRAMP auditor will ask what your AI agents did, w
   </Card>
   <Card title="Agent-to-Agent mTLS" icon="arrows-left-right">
     A2A sidecar with JSON-RPC 2.0. Both sides validate SPIFFE SVIDs via federated trust bundle. The full delegation chain appears as a single evidence row.
+  </Card>
+  <Card title="Tenant Isolation You Can Disprove" icon="key" href="/architecture/multi-tenancy">
+    A separate trust domain **and a separate root CA** per tenant — not a label, not a `tenant_id` column. One tenant's credential is *unverifiable* to another, not merely denied. [Run the openssl commands yourself](/architecture/multi-tenancy); a CronJob re-proves it hourly.
+  </Card>
+  <Card title="Evidence That Proves Two Things" icon="circle-check" href="/security/evidence-verification">
+    `intact` proves the sequence was never altered. `signature_valid_rows` proves **authorship** — signed inside the process, chaining to the SPIFFE root. They are independent, and the endpoint says so itself rather than letting you conflate them.
   </Card>
 </CardGroup>
 
