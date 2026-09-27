@@ -6,7 +6,7 @@ description: "Deploy your first AI agent with Hexr — per-process SPIFFE identi
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.11 to 3.13
 - Docker
 - kubectl configured with a running Kubernetes cluster (EKS, GKE, AKS, or local)
 - Hexr runtime deployed ([self-hosted quickstart](/self-hosted/quickstart))
@@ -17,11 +17,11 @@ description: "Deploy your first AI agent with Hexr — per-process SPIFFE identi
 
 <CodeGroup>
 ```bash uv (recommended)
-uv pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
+uv pip install "hexr-sdk[cli]"
 ```
 
 ```bash pip
-pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
+pip install "hexr-sdk[cli]"
 ```
 </CodeGroup>
 

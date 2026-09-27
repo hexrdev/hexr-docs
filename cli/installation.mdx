@@ -10,11 +10,11 @@ The `hexr` CLI is included in the Python SDK package:
 
 <CodeGroup>
 ```bash uv (recommended)
-uv pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
+uv pip install "hexr-sdk[cli]"
 ```
 
 ```bash pip
-pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
+pip install "hexr-sdk[cli]"
 ```
 </CodeGroup>
 
@@ -49,7 +49,7 @@ Commands:
 
 | Tool | Required For | Install |
 |------|-------------|---------|
-| Python 3.10+ | CLI execution | `brew install python@3.11` |
+| Python 3.11+ | CLI execution | `brew install python@3.11` |
 | Docker | `hexr push` (local builds) | [docker.com](https://docker.com) |
 | kubectl | `hexr deploy`, `hexr status` | `brew install kubectl` |
 | gcloud | `hexr push --cloud` | [cloud.google.com/sdk](https://cloud.google.com/sdk) |
