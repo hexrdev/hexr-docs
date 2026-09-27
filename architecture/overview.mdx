@@ -55,7 +55,7 @@ Every Hexr deployment — cloud or self-hosted — consists of these five layers
     | **Hexr Gateway** | 8090 | OpenAPI → MCP tool adapter. Registers tools, injects credentials from Vault. |
     | **Credential Injector** | 8080 | JWT-SVID → AWS STS / GCP WIF / Azure FT exchange. 3-tier credential cache. |
     | **A2A Sidecar** | 8090 | JSON-RPC 2.0 inter-agent protocol. Valkey-backed task state. |
-    | **Sandbox** | 8092 | Firecracker microVM code execution + headless Chromium browser. |
+    | **Sandbox** | 8092 | Firecracker microVM code execution + headless Chromium. **Not deployed** — subchart ships `enabled: false` and runs on no plane. |
     | **LLM Guard** | 8000 | Prompt injection detection, secret scanning, invisible text detection. |
     | **Envoy Proxy** | 15001/6 | mTLS mesh. Certificate rotation via SPIRE SDS. |
     | **Valkey** | 6379 | 3-node HA. Credential L2 cache + A2A task state. |
@@ -104,7 +104,7 @@ From decorator to production-ready mTLS, the identity cascade has six stages:
     for each discovered process role.
   </Step>
   <Step title="Pod starts (4 containers)" icon="cubes">
-    Init container installs SDK. Then agent, envoy-sidecar, a2a-sidecar, and pid-mapper 
+    Agent, envoy-sidecar and pid-mapper start together, plus a2a-sidecar when the agent sets `a2a=True`. The SDK is already in the image, so nothing installs at start 
     all start. The agent writes a marker file to the shared volume.
   </Step>
   <Step title="SVID issued" icon="certificate">
@@ -133,9 +133,11 @@ Every deployed agent runs as a Kubernetes Pod with **1 init + 3 runtime containe
 <Tabs>
   <Tab title="Containers">
     <Steps>
-      <Step title="Init: install-hexr-sdk" icon="download">
-        Pulls the Hexr SDK from the private PyPI registry into a shared volume. 
-        Runs once before any runtime container starts.
+      <Step title="Image build: SDK baked in" icon="box">
+        The SDK is installed into the container image at `hexr build` time, from
+        the wheel in `.hexr/`. There is no init container and no shared volume:
+        the pod starts with the SDK already present, so it cannot start against
+        an index that is unreachable or a version that has drifted.
       </Step>
       <Step title="agent · :8080" icon="robot">
         **Your Python code.** Runs your `@hexr_agent`-decorated function. Listens on `:8080` for 

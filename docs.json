@@ -112,8 +112,6 @@
             "pages": [
               "sdk/vault",
               "sdk/gateway",
-              "sdk/sandbox",
-              "sdk/browser",
               "sdk/guard",
               "sdk/a2a"
             ]
@@ -173,7 +171,6 @@
               "platform/credential-injector",
               "platform/vault-service",
               "platform/gateway-service",
-              "platform/sandbox",
               "platform/llm-guard",
               "platform/observability-stack"
             ]
@@ -199,9 +196,7 @@
               "guides/multi-cloud-tools",
               "guides/agent-to-agent",
               "guides/llm-observability",
-              "guides/secure-secrets",
-              "guides/code-execution",
-              "guides/browser-agent"
+              "guides/secure-secrets"
             ]
           }
         ]

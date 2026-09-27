@@ -60,7 +60,7 @@ AI agents face threats that traditional applications don't:
 **Attack:** LLM-generated code executed by the agent escapes the sandbox.
 
 **Hexr Mitigation:**
-- **Firecracker microVM** — hardware-level isolation
+- **Kubernetes namespace + NetworkPolicy** — tenant isolation
 - **No network** — sandbox has no outbound connectivity
 - **Resource limits** — prevents resource exhaustion
 - **Destroyed after use** — no persistent state
@@ -76,6 +76,6 @@ AI agents face threats that traditional applications don't:
 | Data exfiltration | LLM06 | PII scanner + vault | High |
 | Agent impersonation | — | SPIFFE mTLS | High |
 | Cross-tenant access | — | Namespace isolation | High |
-| Code execution escape | — | Firecracker sandbox | High |
+| Code execution escape | — | **Not mitigated today.** Agent code runs in the pod; there is no sandbox. | High |
 | Denial of service | — | OPA rate limiting | Medium |
 | Model manipulation | LLM03 | Separate LLM Guard service | Medium |

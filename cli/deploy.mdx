@@ -36,7 +36,6 @@ Applying manifests to tenant-acme-corp...
 
 Waiting for pod readiness...
   acme-research-analyst:
-    ├── init: install-hexr-sdk ✓
     ├── agent ✓
     ├── envoy-sidecar ✓
     ├── a2a-sidecar ✓
@@ -61,7 +60,7 @@ The deploy command applies these Kubernetes manifests in order:
 2. `rbac.yaml` — ServiceAccount, Role, RoleBinding
 3. `process-contexts/*.json` → ConfigMaps
 4. `agent-card.yaml` — Agent Card ConfigMap (if A2A enabled)
-5. `agent-pod.yaml` — Pod with 4 containers + init container
+5. `agent-pod.yaml` — Pod with 3 containers, or 4 when the agent sets `a2a=True`. No init container; the SDK is baked into the image.
 
 ---
 

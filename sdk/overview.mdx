@@ -22,10 +22,11 @@ pip install "hexr-sdk[cli]"
 ```
 </CodeGroup>
 
-<Warning>
-  The Hexr SDK is distributed via private PyPI. You need access credentials.
-  For Hexr Cloud users, `hexr login` configures this automatically.
-</Warning>
+<Note>
+  `hexr-sdk` is on public PyPI. No credentials, no index URL, no `hexr login`.
+  The private index at `pypi.hexr.cloud` exists but is an internal mirror, not a
+  requirement.
+</Note>
 
 ---
 
@@ -47,9 +48,6 @@ def analyze_market(sector: str) -> dict:
     import hexr.vault
     api_key = hexr.vault.get("research/api-key")
     
-    # Code execution in Firecracker microVM
-    import hexr.sandbox
-    result = hexr.sandbox.exec("import pandas; print(pandas.__version__)")
     
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -77,8 +75,6 @@ def analyze_market(sector: str) -> dict:
 | `from hexr import hexr_llm` | LLM observability proxy | [Reference →](/sdk/hexr-llm) |
 | `import hexr.vault` | Secrets management | [Reference →](/sdk/vault) |
 | `import hexr.gateway` | MCP tool gateway | [Reference →](/sdk/gateway) |
-| `import hexr.sandbox` | Code execution | [Reference →](/sdk/sandbox) |
-| `import hexr.browser` | Browser automation | [Reference →](/sdk/browser) |
 | `import hexr.guard` | LLM Guard scanning | [Reference →](/sdk/guard) |
 | `from hexr.a2a import A2AClient` | Agent-to-agent communication | [Reference →](/sdk/a2a) |
 
@@ -90,7 +86,7 @@ Only the core module (`hexr_agent`, `hexr_tool`, `hexr_llm`) loads at import tim
 
 ```python
 import hexr.vault    # Module loads only now
-import hexr.sandbox  # Module loads only now
+import hexr.vault  # Module loads only now
 ```
 
 This keeps agent startup fast and avoids importing unnecessary dependencies.
