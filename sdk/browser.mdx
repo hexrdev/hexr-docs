@@ -4,6 +4,20 @@ sidebarTitle: "Browser"
 description: "Headless Chromium browser running inside a Firecracker microVM. Navigate, click, type, screenshot, and extract text — all hardware-isolated."
 ---
 
+<Warning>
+**Not available on any Hexr-operated plane today.** These calls are a client for
+the `hexr-sandbox` service, which ships as a subchart but is `enabled: false` by
+default and is not deployed on either data plane. Verified 2026-09-27: no
+`hexr-sandbox` Service exists on the EKS or AKS plane.
+
+The client library is real and the API below is accurate. Until the service is
+enabled, a call fails to reach
+`http://hexr-sandbox.hexr-system.svc.cluster.local:8092` rather than doing
+anything. Enable it with `hexr-sandbox.sandbox.enabled=true` and redeploy, or
+point `HEXR_SANDBOX_URL` at your own instance.
+</Warning>
+
+
 ## Quick Start
 
 ```python

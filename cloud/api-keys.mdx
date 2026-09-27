@@ -4,6 +4,16 @@ sidebarTitle: "API Keys"
 description: "Generate and manage API keys for CLI authentication and programmatic access."
 ---
 
+<Warning>
+**`app.hexr.cloud` is not live.** Verified 2026-09-27: the hostname does not
+resolve. The dashboards that exist today are the control-plane admin UI at
+`cp.hexr.cloud` and one per-tenant data-plane UI per cluster, for example
+`dp-globex.hexr.cloud`. Tokens for both are read from Kubernetes Secrets, not
+from a signup flow. Treat the steps on this page as describing the intended
+hosted product rather than something you can follow now.
+</Warning>
+
+
 ## Generating Keys
 
 1. Open [app.hexr.cloud](https://app.hexr.cloud)
