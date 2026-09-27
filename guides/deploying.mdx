@@ -1,0 +1,222 @@
+---
+title: "From build to a running agent"
+sidebarTitle: "Deploying"
+description: "The whole path: hexr build, hexr push, hexr deploy, and how to tell it actually worked."
+---
+
+`hexr build` leaves you a `.hexr/` directory. This page takes that to an agent
+running on a cluster with a real identity.
+
+<Note>
+Every command and every output here was run end to end on a clean machine on
+2026-09-27 against live clusters. Where something failed, the failure is shown
+rather than edited out.
+</Note>
+
+## The three commands
+
+```bash
+hexr build agent.py --tenant <tenant>   # generate artifacts
+hexr push  --tenant <tenant>            # build the image and push it
+hexr deploy .hexr --context <ctx>       # apply to the cluster
+```
+
+Read the next section before using `hexr deploy` in production.
+
+## What each step actually does
+
+### `hexr build` does not build an image
+
+This is the most common surprise. `hexr build` writes a Dockerfile, Kubernetes
+manifests, a pinned `hexr-sdk` wheel and a `requirements.txt`. It never invokes
+Docker. The summary line:
+
+```
+✅ Build completed successfully!
+📦 Image: globex-azure/agent:development
+```
+
+names the tag the manifests *will* reference. Nothing is built or pushed yet.
+Skip the push and your pod sits in `ImagePullBackOff`, because the manifests use
+`imagePullPolicy: Always`.
+
+```
+.hexr/
+├── Dockerfile
+├── agent.py
+├── build-summary.json
+├── hexr_sdk-0.5.31-...-manylinux2014_x86_64.whl
+├── requirements.txt
+└── manifests/
+    ├── agent-envoy-sidecar-config.yaml
+    ├── agent-pod.yaml
+    ├── namespace.yaml
+    ├── network-policy.yaml
+    ├── rbac.yaml
+    ├── resource-quota.yaml
+    └── bespoke-agents/
+```
+
+### Everything is amd64, on purpose
+
+The wheel is downloaded with `pip download --platform manylinux2014_x86_64`, so
+it is x86_64 and nothing else.
+
+<Warning>
+On Apple Silicon with SDK **older than 0.5.32**, `docker build` defaults to
+arm64 and fails:
+
+```
+ERROR: hexr_sdk-0.5.31-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+       is not a supported wheel on this platform.
+```
+
+From 0.5.32 the generated Dockerfile pins `FROM --platform=linux/amd64` and
+`hexr push` defaults to amd64 only, so this works with no flags. On an older
+SDK, pass `--platform linux/amd64` to both.
+</Warning>
+
+Docker prints a `FromPlatformFlagConstDisallowed` lint warning about that pin.
+Warning, not error, and deliberate.
+
+### `hexr deploy` skips two manifests that `hexr build` generated
+
+**Know this before you rely on it.** `hexr deploy` applies exactly three files
+plus the Envoy ConfigMap:
+
+```
+namespace.yaml   rbac.yaml   agent-pod.yaml   agent-envoy-sidecar-config.yaml
+```
+
+It does **not** apply `network-policy.yaml` or `resource-quota.yaml`. That is a
+deliberate backlog decision recorded in `cli/deploy.py`, not a bug — but the
+consequence is that a `hexr deploy` agent runs with **no network isolation and
+no resource quota**, and the command still prints:
+
+```
+      🎉 Deployment Successful
+```
+
+Count the manifests to see it. `hexr deploy --dry-run` reports
+`Would apply 9 manifests`, while `kubectl apply -f .hexr/manifests/` applies
+**11** objects. The two missing ones are the NetworkPolicy and the ResourceQuota.
+
+<Warning>
+For any environment where tenant isolation matters, either apply the full
+directory with `kubectl`, or apply the two files yourself after `hexr deploy`:
+
+```bash
+kubectl --context <ctx> apply -f .hexr/manifests/network-policy.yaml
+kubectl --context <ctx> apply -f .hexr/manifests/resource-quota.yaml
+```
+</Warning>
+
+## Walkthrough
+
+### 1. Build
+
+```bash
+hexr build agent.py --tenant globex-azure --trust-domain agents.hexr.cloud
+```
+
+### 2. Push
+
+```bash
+hexr push --tenant globex-azure
+```
+
+Or do it by hand. Read the image out of the manifest so the two cannot drift,
+and note the build context is `.hexr`, not `.`:
+
+```bash
+IMAGE=$(grep -m1 'image:' .hexr/manifests/agent-pod.yaml | awk '{print $2}')
+docker build -f .hexr/Dockerfile -t "$IMAGE" .hexr
+docker push "$IMAGE"
+```
+
+Check what you built:
+
+```bash
+docker image inspect "$IMAGE" --format 'arch={{.Architecture}} os={{.Os}}'
+# arch=amd64 os=linux
+
+docker run --rm --entrypoint python "$IMAGE" -c "import hexr; print(hexr.__version__)"
+# 0.5.31
+```
+
+`--entrypoint python` is required. The image has its own entrypoint, so
+`docker run <image> python -c ...` passes `python` to that entrypoint and fails
+with `can't open file '/app/python'`.
+
+### 3. Check against the real cluster before applying
+
+A server dry-run runs full admission, RBAC and quota checks and creates nothing:
+
+```bash
+kubectl --context <ctx> apply -f .hexr/manifests/ --dry-run=server
+```
+
+```
+configmap/agent-envoy-sidecar-config configured (server dry run)
+pod/globex-azure-agent created (server dry run)
+namespace/tenant-globex-azure configured (server dry run)
+networkpolicy.networking.k8s.io/globex-azure-agent-isolation created (server dry run)
+serviceaccount/hexr-agent unchanged (server dry run)
+serviceaccount/hexr-deployer unchanged (server dry run)
+role.rbac.authorization.k8s.io/hexr-agent-role unchanged (server dry run)
+role.rbac.authorization.k8s.io/hexr-deployer-role unchanged (server dry run)
+rolebinding.rbac.authorization.k8s.io/hexr-agent-binding unchanged (server dry run)
+rolebinding.rbac.authorization.k8s.io/hexr-deployer-binding unchanged (server dry run)
+resourcequota/globex-azure-quota created (server dry run)
+```
+
+`unchanged` on the RBAC objects means the tenant is already onboarded; on a new
+tenant they read `created`.
+
+### 4. Apply
+
+Full set, recommended:
+
+```bash
+kubectl --context <ctx> apply -f .hexr/manifests/
+```
+
+Or the CLI, accepting the two omissions above:
+
+```bash
+hexr deploy .hexr --context <ctx> --namespace tenant-<tenant> --skip-guidance
+```
+
+`--skip-guidance` turns off interactive cluster selection; use it in CI.
+
+### 5. Verify identity, which is the actual goal
+
+A `Running` pod is not success. Success is the agent holding an SVID and writing
+**signed** evidence. Unsigned rows mean the agent never got an identity and is
+attributing nothing, while still looking busy.
+
+```bash
+kubectl --context <ctx> -n tenant-<tenant> get pod
+kubectl --context <ctx> -n tenant-<tenant> logs <pod> -c agent | grep -i svid
+```
+
+```sql
+SELECT count(*)                                             AS rows,
+       count(*) FILTER (WHERE COALESCE(signature,'') <> '') AS signed
+FROM compliance_evidence
+WHERE tenant_id = '<tenant>' AND recorded_at > now() - interval '10 minutes';
+```
+
+`signed` must be greater than zero. If `rows` climbs while `signed` stays at
+zero, stop and fix identity before going further.
+
+## Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| `ImagePullBackOff` | Push skipped. `hexr build` does not push, and the manifests use `imagePullPolicy: Always`. |
+| `not a supported wheel on this platform` | Apple Silicon on SDK < 0.5.32. See the warning above. |
+| `can't open file '/app/python'` | Missing `--entrypoint python` on `docker run`. |
+| Agent has no NetworkPolicy | Used `hexr deploy`, which omits it. Apply it separately. |
+| Pod runs, evidence unsigned | No SVID. Check spire-agent is Ready on the node and the tenant has registration entries. |
+| Tool calls denied after a cross-cloud deploy | Check the OIDC issuer, not the policy. `scripts/check-oidc-issuer.sh` in the platform repo. |
