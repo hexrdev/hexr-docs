@@ -4,6 +4,66 @@ sidebarTitle: "hexr build"
 description: "Analyze your Python agent with AST-based discovery. Generates Dockerfile, Kubernetes manifests, SPIFFE process contexts, and A2A artifacts."
 ---
 
+## A verified first run
+
+Everything below was run on 2026-09-27 from a clean `uv` virtualenv with no
+pip installed, against the published SDK. It is what you should see.
+
+```bash
+uv venv .venv
+uv pip install 'hexr-sdk[cli]'
+hexr build agent.py --tenant acme --target development
+```
+
+```
+📦 No pip in this environment; bootstrapping it with ensurepip...
+📦 Downloading hexr-sdk==0.5.31 (manylinux_x86_64) from https://pypi.org/simple/...
+✅ Downloaded hexr-sdk wheel for Docker image build
+✅ Build completed successfully!
+📦 Image: acme/agent:development
+📂 Artifacts: .hexr
+⏱️  Duration: 2.1s
+```
+
+Artifacts produced in `.hexr/`:
+
+```
+Dockerfile
+agent.py
+build-summary.json
+enterprise_pid_mapper.py
+hexr_sdk-0.5.31-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+manifests/
+  agent-pod.yaml
+  agent-envoy-sidecar-config.yaml
+  namespace.yaml
+  network-policy.yaml
+  rbac.yaml
+  resource-quota.yaml
+requirements.txt
+```
+
+<Note>
+**One warning is expected off-cluster.** `hexr build` on a laptop logs
+`Could not get enterprise host PID ... Using fallback simulation`. PID
+mapping needs a pod with `hostPID: true`; there isn't one on your machine,
+the build falls back cleanly, and the manifests are unaffected.
+</Note>
+
+### Three things fixed in 0.5.31, in case you are on an older SDK
+
+| Symptom | Cause |
+|---|---|
+| Authentication failure fetching the SDK wheel | Older builds defaulted to the private index. `hexr-sdk` is on public PyPI; 0.5.31 defaults there |
+| `No module named pip` | `uv` virtualenvs have no pip. 0.5.31 bootstraps it with `ensurepip` |
+| The image ships an SDK older than the one you are running | The local-`dist/` shortcut took any wheel it found, with no version check. 0.5.31 pins the glob to the running version and reports what it skipped |
+
+The third one is worth knowing about if you built images before 0.5.31:
+check which wheel is in your `.hexr/` directory against
+`python -c "import hexr; print(hexr.__version__)"`. If they differ, rebuild.
+
+---
+
 ## Usage
 
 ```bash

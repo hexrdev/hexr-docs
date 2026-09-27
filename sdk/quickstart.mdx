@@ -113,6 +113,30 @@ A framework nobody has heard of yet is a file, not a release. If you
 maintain a framework, you can open a pull request instead of waiting for
 us to notice you.
 
+## 4. Build a container and manifests
+
+Still no cluster needed. `hexr build` turns the file into a Dockerfile,
+an agent pod spec, and the supporting Kubernetes manifests:
+
+```bash
+hexr build agent.py --tenant acme --target development
+```
+
+```
+✅ Build completed successfully!
+📦 Image: acme/agent:development
+📂 Artifacts: .hexr
+```
+
+`.hexr/manifests/` now holds `agent-pod.yaml`, the Envoy sidecar config,
+namespace, RBAC, network policy and resource quota. The SDK wheel matching
+your installed version is baked in alongside them.
+
+Applying those to a cluster running the Hexr runtime is where the identity
+appears, and that is the next guide. See
+[hexr build](/cli/build) for every option and a verified first-run
+transcript.
+
 ## What happens once it is deployed
 
 So the payoff is clear, briefly:
