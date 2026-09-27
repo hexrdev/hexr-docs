@@ -94,7 +94,8 @@
             "group": "SDK Overview",
             "pages": [
               "sdk/overview",
-              "sdk/installation"
+              "sdk/installation",
+              "sdk/quickstart"
             ]
           },
           {

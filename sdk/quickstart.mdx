@@ -1,0 +1,147 @@
+---
+title: "Your first ten minutes"
+sidebarTitle: "Quickstart"
+description: "Install the SDK, mark up a LangGraph agent, and have Hexr recognise it. No cluster required."
+---
+
+Install the SDK, mark up an agent, and have Hexr recognise it. About ten
+minutes, and it needs no cluster, no cloud account and no Docker.
+
+<Note>
+Every command on this page was run end to end on macOS and in a clean
+Linux container before it was written. Where something does not work yet,
+the page says so.
+</Note>
+
+## What this page does not cover
+
+Deploying that agent and watching it receive a cryptographic identity
+needs a Kubernetes cluster running the Hexr runtime. That is a separate
+guide. This page stops at the point where Hexr understands your code.
+
+## 1. Install
+
+```bash
+pip install 'hexr-sdk[cli]'
+```
+
+Python 3.11 to 3.13, on macOS, Linux x86_64 or Linux aarch64. Nothing
+else. A clean install takes about a second.
+
+```bash
+python -c "import hexr; print(hexr.__version__)"
+# 0.5.31
+```
+
+## 2. Mark up an agent
+
+An ordinary LangGraph app with two decorators added. Save as `agent.py`:
+
+```python agent.py
+from langgraph.graph import StateGraph, END
+from hexr import hexr_agent, hexr_tool
+
+@hexr_tool("aws_s3")
+def fetch_claim(claim_id: str) -> str:
+    return f"claim {claim_id}"
+
+def plan(state): return state
+def act(state):  return state
+
+@hexr_agent(name="triage", tenant="acme")
+def main():
+    g = StateGraph(dict)
+    g.add_node("plan", plan)
+    g.add_node("act", act)
+    g.add_edge("plan", "act")
+    g.add_edge("act", END)
+    g.set_entry_point("plan")
+    return g.compile().invoke({})
+```
+
+Two things worth noticing.
+
+**`@hexr_agent` takes no framework argument.** It does not need to know
+what you are building on. The framework is recognised separately, from
+your source.
+
+**`@hexr_tool("aws_s3")` names the resource, not a credential.** Once
+deployed, the agent process never holds a long-lived secret. It proves
+which process it is and is handed a credential that expires in minutes.
+
+## 3. Let Hexr recognise it
+
+```bash
+hexr analyze .
+```
+
+```
+Framework: LangGraph (id=langgraph, confidence=1.00)
+                          Agents (4)
+┏━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Name ┃ Class                                   ┃ Framework ┃
+┡━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+│      │ langgraph.graph.StateGraph              │ langgraph │
+│      │ langgraph.graph.StateGraph#orchestrator │ langgraph │
+└──────┴─────────────────────────────────────────┴───────────┘
+```
+
+**LangGraph was not installed when that ran.** Recognition is static: it
+reads your source, it does not import or execute your code.
+
+Add `--json` for a machine-readable manifest, which is what `hexr build`
+consumes later.
+
+## Recognition is data, not code
+
+Fifteen frameworks are recognised today:
+
+`adk` · `agno` · `autogen` · `claude-agent` · `crewai` · `dspy` ·
+`langchain` · `langgraph` · `llamaindex` · `mcp` · `openai-agents` ·
+`pydantic-ai` · `smolagents` · `strands` · `bespoke` (in-house)
+
+Measured confidence on real code: LangGraph 1.00, CrewAI 1.00,
+Pydantic AI 0.90.
+
+And seven agentic patterns: prompt chaining, routing, parallelisation,
+orchestrator-workers, evaluator-optimiser, ReAct, reflection.
+
+Each is a YAML signature pack rather than product code, and the packs are
+public at
+[github.com/hexrdev/hexr-signatures](https://github.com/hexrdev/hexr-signatures).
+A framework nobody has heard of yet is a file, not a release. If you
+maintain a framework, you can open a pull request instead of waiting for
+us to notice you.
+
+## What happens once it is deployed
+
+So the payoff is clear, briefly:
+
+- Every agent **process** gets its own SPIFFE identity, valid four hours,
+  held in memory and never written to disk or an environment variable.
+- A process that is not registered is refused in about fifteen seconds,
+  and **the refusal is itself a signed record**.
+- Every tool call, model call and agent-to-agent call becomes a
+  hash-chained, signed evidence row.
+- Your auditor is handed one zip whose `verify.html` re-derives every hash
+  and signature on their own laptop, offline, with nothing installed.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `could not compile hexr_analyzer` on macOS | SDK ≤ 0.5.30 shipped no macOS wheel | `pip install -U hexr-sdk` |
+| `Building wheel for psutil ... error` on ARM Linux | SDK ≤ 0.5.30 pinned `psutil<6`, which has no aarch64 wheel | `pip install -U hexr-sdk` |
+| `hexr: the CLI needs the optional cli extra` | You installed the base package | `pip install 'hexr-sdk[cli]'` |
+| Agent names are blank in the table | Expected. That column lists framework-detected classes; `@hexr_agent(name=...)` names are in the JSON | `hexr analyze . --json` |
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Per-process identity" icon="fingerprint" href="/architecture/per-process-identity">
+    Why the identity is per process rather than per pod.
+  </Card>
+  <Card title="Evidence verification" icon="shield-check" href="/security/evidence-verification">
+    What your auditor actually receives, and how they check it.
+  </Card>
+</CardGroup>

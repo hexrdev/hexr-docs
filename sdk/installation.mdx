@@ -1,90 +1,92 @@
 ---
 title: "Installation"
 sidebarTitle: "Installation"
-description: "Install the Hexr Python SDK from the private PyPI registry."
+description: "Install the Hexr Python SDK from PyPI. No account, no private index."
 ---
+
+`hexr-sdk` is published on **public PyPI**. You do not need a Hexr account,
+a licence key or a private index to install it or to use the decorators.
+
+```bash
+pip install 'hexr-sdk[cli]'
+```
+
+<Note>
+Earlier versions of this page told you to add
+`--extra-index-url https://pypi.hexr.cloud/simple/`. That is the private
+mirror used by deployed agent pods, and it is not needed to install the
+SDK. Plain `pip` is correct.
+</Note>
 
 ## Requirements
 
-- Python 3.10+
-- Access to Hexr private PyPI (`pypi.hexr.cloud`)
+| | |
+|---|---|
+| Python | 3.11, 3.12 or 3.13 |
+| Platform | macOS (Apple Silicon and Intel), Linux x86_64, Linux aarch64 |
+| Anything else | Nothing. No cluster and no cloud account to install or analyse |
 
----
+<Warning>
+macOS and ARM Linux wheels ship from **0.5.31**. On 0.5.30 and earlier
+`pip install hexr-sdk` failed on macOS (no wheel, so pip tried to compile
+the Rust analyzer) and on ARM Linux (a `psutil` pin with no aarch64
+wheel). If you hit either, upgrade: `pip install -U hexr-sdk`.
+</Warning>
 
-## Install with uv (Recommended)
+## With uv
 
 ```bash
-uv pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
+uv pip install 'hexr-sdk[cli]'
 ```
 
-## Install with pip
+## Why there is a `[cli]` extra
+
+The default install is the **lean agent-pod profile**: it has one runtime
+dependency, because it is what ships inside your agent containers and
+those should not carry command-line tooling.
+
+Everything you need to instrument an agent is in the base install:
+
+```python
+from hexr import hexr_agent, hexr_tool, hexr_llm
+```
+
+The `[cli]` extra adds `click` and `rich`, which the `hexr` command needs.
+If you install the base package and run `hexr`, it tells you so rather
+than failing with a traceback:
+
+```
+hexr: the CLI needs the optional `cli` extra, which is not installed.
+
+    pip install 'hexr-sdk[cli]'
+```
+
+## Other extras
+
+| Extra | Adds |
+|---|---|
+| `cli` | The `hexr` command (`click`, `rich`) |
+| `aws`, `gcp`, `azure` | Cloud SDKs for credential exchange on that provider |
+| `observability` | OpenTelemetry exporters |
+| `frameworks` | Common agent frameworks, for local experimentation |
+| `enterprise` | The L3 signature-suggestion model (ONNX weights) |
+| `all` | Everything above |
+
+Install several at once:
 
 ```bash
-pip install "hexr-sdk[cli]" --extra-index-url https://pypi.hexr.cloud/simple/
+pip install 'hexr-sdk[cli,aws,observability]'
 ```
 
----
-
-## Configure Private PyPI
-
-To avoid passing `--extra-index-url` every time, add it to your pip configuration:
-
-<CodeGroup>
-```ini pip.conf (~/.config/pip/pip.conf)
-[global]
-extra-index-url = https://pypi.hexr.cloud/simple/
-```
-
-```toml pyproject.toml
-[[tool.uv.index]]
-url = "https://pypi.hexr.cloud/simple/"
-```
-</CodeGroup>
-
----
-
-## Verify Installation
+## Verify
 
 ```bash
 python -c "import hexr; print(hexr.__version__)"
+hexr --help
 ```
 
-```
-0.2.7
-```
+## Next
 
----
-
-## What's Included
-
-The `hexr` package includes:
-
-| Module | Dependencies |
-|--------|-------------|
-| Core (`hexr_agent`, `hexr_tool`, `hexr_llm`) | `opentelemetry-api`, `opentelemetry-sdk`, `grpcio` |
-| `hexr.vault` | `httpx` |
-| `hexr.gateway` | `httpx` |
-| `hexr.sandbox` | `httpx` |
-| `hexr.browser` | `httpx` |
-| `hexr.guard` | `httpx` |
-| `hexr.a2a` | `httpx`, `pydantic` |
-
-Core dependencies are minimal. Lazy-loaded modules only import their dependencies when first accessed.
-
----
-
-## In Kubernetes (Automatic)
-
-When you `hexr deploy`, the SDK is installed automatically via an init container:
-
-```yaml
-initContainers:
-  - name: install-hexr-sdk
-    image: python:3.11-slim
-    command: ["pip", "install", "--target=/shared/site-packages", "hexr"]
-    env:
-      - name: PIP_INDEX_URL
-        value: "https://pypi.hexr.cloud/simple/"
-```
-
-You don't need to include `hexr` in your agent's `requirements.txt` — it's injected at deployment time.
+<Card title="Your first ten minutes" icon="rocket" href="/sdk/quickstart">
+  Decorate a LangGraph agent and have Hexr recognise it. No cluster needed.
+</Card>
