@@ -6,14 +6,16 @@ description: "Every agent deploys as a Kubernetes Pod with four containers: your
 
 ## Pod Structure
 
-When you run `hexr deploy`, your agent becomes a Kubernetes Pod with exactly four containers plus an init container:
+When you run `hexr deploy`, your agent becomes a Kubernetes Pod with three containers, or four when the agent sets `a2a=True`. There is no init container: the SDK is baked into the image at `hexr build` time.
 
 <Tabs>
   <Tab title="Containers">
     <Steps>
-      <Step title="Init: install-hexr-sdk" icon="download">
-        Installs the Hexr SDK from private PyPI into a shared volume. Ensures the SDK version 
-        matches what was used during `hexr build`.
+      <Step title="Image build: SDK baked in" icon="box">
+        The SDK is installed into the image at `hexr build` time, from the wheel
+        in `.hexr/`. Version match with the build is guaranteed because it is the
+        same wheel, not a re-resolution at pod start. No init container, no
+        shared volume.
       </Step>
       <Step title="agent · :8080" icon="robot">
         **Your Python code.** Runs your `@hexr_agent`-decorated function. Listens on `:8080` 
@@ -54,13 +56,11 @@ When you run `hexr deploy`, your agent becomes a Kubernetes Pod with exactly fou
         hexr.io/agent-name: "research-analyst"
     spec:
       hostPID: true  # Required for per-process identity
-      initContainers:
-        - name: install-hexr-sdk
       containers:
-        - name: agent           # Your code (:8080)
+        - name: agent           # Your code (:8080), SDK baked into the image
         - name: envoy-sidecar   # mTLS proxy (:15001/:15006)
-        - name: a2a-sidecar     # Agent comms (:8090)
         - name: pid-mapper      # PID → SPIFFE mapper
+        # - name: a2a-sidecar   # Agent comms (:8090) — only when a2a=True
     ```
   </Tab>
 </Tabs>
@@ -165,24 +165,27 @@ Three volumes connect the containers:
 
 ---
 
-## Init Container
+## How the SDK gets into the pod
 
-Before the main containers start, an init container installs the Hexr SDK:
+It is already there. `hexr build` downloads the `hexr-sdk` wheel into `.hexr/`
+and the generated Dockerfile installs it into the image:
 
-```yaml
-initContainers:
-  - name: install-hexr-sdk
-    image: python:3.11-slim
-    command: ["pip", "install", "--target=/shared/site-packages", "hexr"]
-    env:
-      - name: PIP_INDEX_URL
-        value: "https://pypi.hexr.cloud/simple/"  # Private PyPI
-    volumeMounts:
-      - name: shared-packages
-        mountPath: /shared/site-packages
+```dockerfile
+COPY hexr_sdk*.whl /tmp/
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir /tmp/hexr_sdk*.whl
 ```
 
-This ensures the SDK version matches what was used during `hexr build`, regardless of what's baked into the agent image.
+**There is no init container and no shared `site-packages` volume.** An earlier
+design installed the SDK at pod start from `pypi.hexr.cloud`; that is gone, and
+the pods running today have no `initContainers` at all.
+
+Baking it in is the stronger arrangement. The version in the pod is the exact
+wheel `hexr build` resolved, not a re-resolution at start time, so it cannot
+drift between build and run. It also means a pod cannot fail to start because an
+index was unreachable or credentials had expired — which matters more than it
+sounds, since that failure would land at scale-up time rather than at build
+time.
 
 ---
 

@@ -33,7 +33,7 @@ Hexr is built on three security principles:
     **LLM Guard** — Prompt injection detection, PII scanning, secrets scanning, invisible text detection.
   </Accordion>
   <Accordion title="Layer 6: Isolation" icon="box">
-    **Firecracker Sandbox** — microVM code execution with hardware-level isolation. **Kubernetes Namespaces** — tenant isolation.
+    **Kubernetes Namespaces** — tenant isolation, with a NetworkPolicy and ResourceQuota per tenant namespace.
   </Accordion>
 </AccordionGroup>
 
@@ -52,7 +52,7 @@ Identity (SPIRE) → Transport (mTLS) → Authorization (OPA) → Credentials �
 | **OPA Policies** | Overprivileged access | Per-process, per-service authorization |
 | **Credential Injector** | Credential leakage, long-lived keys | 15-minute tokens, auto-rotated |
 | **LLM Guard** | Prompt injection, PII leakage | Multi-scanner pipeline |
-| **Sandbox** | Arbitrary code execution | Firecracker microVM isolation |
+| **Namespace** | Tenant workload separation | NetworkPolicy + ResourceQuota per tenant |
 | **Namespaces** | Cross-tenant data access | Kubernetes namespace isolation |
 
 ---

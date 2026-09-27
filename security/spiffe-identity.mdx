@@ -62,8 +62,9 @@ The complete lifecycle of a SPIFFE identity — from build to cloud access:
     `hexr build` scans your Python source via AST analysis. Discovers all agent roles 
     (researcher, writer, editor) and generates process context JSON files.
   </Step>
-  <Step title="Pod starts: SDK installed" icon="download">
-    Init container installs the Hexr SDK from private PyPI into a shared volume.
+  <Step title="Pod starts: SDK already present" icon="box">
+    The SDK was baked into the image at `hexr build` time. Nothing is fetched at
+    pod start.
   </Step>
   <Step title="PID Mapper: Process registration" icon="fingerprint">
     When the agent process starts (e.g., "researcher", PID 42), the PID Mapper reads `/proc`, 
