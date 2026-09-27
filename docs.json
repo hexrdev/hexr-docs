@@ -76,6 +76,7 @@
             "group": "Security & Compliance",
             "pages": [
               "security/overview",
+              "security/compliance",
               "security/spiffe-identity",
               "security/evidence-verification",
               "security/opa-policies",
