@@ -12,7 +12,7 @@ The only thing Hexr operates is a lightweight licensing endpoint: `api.hexr.clou
 Hexr runs on **AWS EKS · GCP GKE · Azure AKS · on-premises Kubernetes**.
 
 ```bash
-helm install hexr-runtime hexr/hexr-runtime \
+helm install hexr-runtime ./deployment/helm/hexr-runtime \
   -n hexr-system \
   -f values.yaml
 ```
