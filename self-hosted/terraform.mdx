@@ -1,106 +1,99 @@
 ---
 title: "Terraform Setup"
 sidebarTitle: "Terraform"
-description: "Deploy Hexr infrastructure on AWS, GCP, or Azure using Terraform modules."
+description: "Provision the infrastructure Hexr runs on, using the Terraform modules in the platform repo."
 ---
 
-## Overview
+## Where the modules live
 
-Hexr provides Terraform modules for provisioning the underlying infrastructure:
+In the platform repository under `deployment/terraform/`, one directory per
+cloud:
 
-- Kubernetes cluster (GKE / EKS / AKS)
-- PostgreSQL database
-- Container registry
-- Networking (VPC, subnets, firewall rules)
-- Cloud provider IAM for SPIFFE federation
+```
+deployment/terraform/
+├── aws/     main.tf, iam-trust/, tenants/
+├── azure/   main.tf, iam-trust/
+└── gcp/     main.tf, iam-trust/
+```
 
----
+<Warning>
+Until 2026-09-27 this page told you to source
+`github.com/hexr-dev/terraform-hexr-gcp` and two sibling repos. **Those
+repositories do not exist** — all three return 404. The modules have always
+lived in the platform repo. Use the paths above.
+</Warning>
 
-## GCP (Google Cloud)
+Each cloud has two pieces:
+
+| Module | What it provisions |
+|---|---|
+| `<cloud>/` | Kubernetes cluster, managed Postgres, container registry, networking |
+| `<cloud>/iam-trust/` | The cloud-side IAM trust so a SPIFFE identity can exchange for cloud credentials |
+
+`aws/tenants/` additionally holds per-tenant IAM role mappings.
+
+## Using a module
+
+Clone the repo and run Terraform against the directory for your cloud:
+
+```bash
+git clone https://github.com/hexrdev/hexr.git
+cd hexr/deployment/terraform/gcp
+terraform init
+terraform plan
+```
+
+Or reference it as a module source from your own root configuration:
 
 ```hcl
 module "hexr_gcp" {
-  source = "github.com/hexr-dev/terraform-hexr-gcp"
+  source = "github.com/hexrdev/hexr//deployment/terraform/gcp"
 
   project_id   = "your-project"
   region       = "us-central1"
-  cluster_name = "hexr-cluster"
-  
-  # Database
-  database_tier    = "db-custom-2-8192"
-  database_version = "POSTGRES_14"
-  
-  # SPIRE OIDC
-  oidc_hostname = "oidc.your-domain.com"
-  
-  # Workload Identity Federation
-  trust_domain = "your-company.internal"
+  zone         = "us-central1-a"
+  environment  = "prod"
+
+  domain       = "example.com"
+  trust_domain = "agents.example.com"
+
+  db_tier      = "db-custom-2-8192"
+  db_password  = var.db_password   # do not hardcode
 }
 ```
 
----
+Note the `//` in the source URL — it is what selects a subdirectory of a repo.
 
-## AWS
+<Note>
+**`domain` and `trust_domain` are different values and must stay different.**
+`domain` is where the dashboards and APIs are served. `trust_domain` is the
+SPIFFE trust domain that appears inside every SVID and every evidence row, and
+changing it invalidates existing identities. The GCP module's own variable
+description says so: *"SPIFFE trust domain (hexr.dev, NOT hexr.cloud)"*.
+</Note>
+
+## Defaults are Hexr's own, not yours
+
+Every variable in the GCP module ships with a default pointing at Hexr's
+production project:
 
 ```hcl
-module "hexr_aws" {
-  source = "github.com/hexr-dev/terraform-hexr-aws"
-
-  region       = "us-east-1"
-  cluster_name = "hexr-cluster"
-  
-  # Database
-  rds_instance_class = "db.r6g.large"
-  
-  # SPIRE OIDC Federation
-  oidc_hostname = "oidc.your-domain.com"
-  trust_domain  = "your-company.internal"
-}
+project_id   default = "hexr-cloud-prod"
+region       default = "us-central1"
+domain       default = "hexr.cloud"
+trust_domain default = "hexr.dev"
+db_tier      default = "db-f1-micro"
 ```
 
----
+Those exist because the modules provision Hexr's own planes. **Set every one of
+them explicitly for your deployment**, or a `terraform apply` will attempt to
+build against Hexr's project names. `db_tier` in particular defaults to
+`db-f1-micro`, which is a development instance and not a size to run a
+production evidence store on.
 
-## Azure
+## What Terraform does not do
 
-```hcl
-module "hexr_azure" {
-  source = "github.com/hexr-dev/terraform-hexr-azure"
-
-  location           = "eastus"
-  resource_group     = "hexr-rg"
-  cluster_name       = "hexr-cluster"
-  
-  # Database
-  postgres_sku_name = "GP_Standard_D2s_v3"
-  
-  # Federated Identity
-  trust_domain = "your-company.internal"
-}
-```
-
----
-
-## What Gets Provisioned
-
-| Resource | GCP | AWS | Azure |
-|----------|-----|-----|-------|
-| Kubernetes | GKE Autopilot | EKS | AKS |
-| Database | Cloud SQL | RDS | Azure DB for PostgreSQL |
-| Registry | Artifact Registry | ECR | ACR |
-| Network | VPC + Subnets | VPC + Subnets | VNet + Subnets |
-| IAM | Workload Identity | IRSA | Managed Identity |
-| DNS | Cloud DNS | Route 53 | Azure DNS |
-
----
-
-## After Terraform
-
-Once infrastructure is provisioned:
-
-```bash
-# Connect to the cluster
-gcloud container clusters get-credentials hexr-cluster --region us-central1
-
-# Install Hexr via Helm
-helm install hexr-runtime hexr/hexr-runtime -n hexr-system -f values.yaml
-```
+It provisions infrastructure only. The Hexr runtime itself is installed with
+Helm afterwards — see [Helm Install](/self-hosted/helm). Terraform gives you a
+cluster; Helm puts SPIRE, the evidence API, the credential injector and the
+rest of the plane into it.

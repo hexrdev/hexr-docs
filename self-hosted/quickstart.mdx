@@ -16,12 +16,18 @@ description: "Deploy Hexr on your own Kubernetes cluster — EKS, GKE Standard, 
 
 ---
 
-## 1. Add the Helm Repository
+## 1. Get the charts
+
+There is **no published Helm repository**. `charts.hexr.dev` was referenced here
+until 2026-09-27 and does not resolve. The charts live in the platform repo, and
+every Hexr-operated plane is installed from that working copy:
 
 ```bash
-helm repo add hexr https://charts.hexr.dev
-helm repo update
+git clone https://github.com/hexrdev/hexr.git
+cd hexr
 ```
+
+The chart you want is `deployment/helm/hexr-runtime`.
 
 ---
 
@@ -80,7 +86,7 @@ dashboard:
 ## 4. Install
 
 ```bash
-helm install hexr-runtime hexr/hexr-runtime \
+helm install hexr-runtime ./deployment/helm/hexr-runtime \
   -n hexr-system \
   -f values.yaml \
   --set attestor.database.postgres.external.password="YOUR_DB_PASSWORD" \

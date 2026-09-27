@@ -16,7 +16,7 @@ SPIRE (SPIFFE Runtime Environment) is the **identity foundation** of Hexr. It is
 |-----------|------|---------|
 | **SPIRE Server** | Certificate authority, registration store | StatefulSet in `spire` namespace |
 | **SPIRE Agent** | Node-level attestor, workload API provider | DaemonSet (every node) |
-| **OIDC Discovery** | Publishes JWKS for cloud federation | Deployment at `oidc.hexr.cloud` |
+| **OIDC Discovery** | Publishes JWKS for cloud federation | Deployment at `oidc.hexr.dev` |
 
 ---
 
@@ -74,11 +74,11 @@ spiffe://demo.hexr.dev/agent/dev-team/my-agent/main
 
 ## OIDC Discovery
 
-SPIRE publishes a JWKS endpoint at `oidc.hexr.cloud/.well-known/openid-configuration`, enabling cloud providers to validate JWT-SVIDs for credential exchange:
+SPIRE publishes a JWKS endpoint enabling cloud providers to validate JWT-SVIDs for credential exchange. **The hostname is per trust domain**, and it must match the `iss` claim SPIRE stamps into the token, or the exchange fails with `invalid_grant: Error connecting to the given credential's issuer`:
 
 ```
-https://oidc.hexr.cloud/.well-known/openid-configuration
-https://oidc.hexr.cloud/keys
+https://oidc.hexr.dev/.well-known/openid-configuration
+https://oidc.hexr.dev/keys
 ```
 
 This is how `hexr_tool()` credential exchange works — cloud providers trust the SPIRE OIDC endpoint as an identity provider.
@@ -101,5 +101,5 @@ spire:
     socketPath: /run/spire/sockets/agent.sock
   oidc:
     enabled: true
-    hostname: oidc.hexr.cloud
+    hostname: oidc.hexr.dev
 ```
