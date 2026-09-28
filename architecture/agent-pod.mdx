@@ -176,16 +176,12 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir /tmp/hexr_sdk*.whl
 ```
 
-**There is no init container and no shared `site-packages` volume.** An earlier
-design installed the SDK at pod start from `pypi.hexr.cloud`; that is gone, and
-the pods running today have no `initContainers` at all.
+There is no init container and no shared `site-packages` volume.
 
-Baking it in is the stronger arrangement. The version in the pod is the exact
-wheel `hexr build` resolved, not a re-resolution at start time, so it cannot
-drift between build and run. It also means a pod cannot fail to start because an
-index was unreachable or credentials had expired — which matters more than it
-sounds, since that failure would land at scale-up time rather than at build
-time.
+Baking the SDK in means the version in the pod is the exact wheel `hexr build`
+resolved, so it cannot drift between build and run, and a pod cannot fail to
+start because a package index is unreachable. That failure would otherwise land
+at scale-up time rather than at build time.
 
 ---
 
