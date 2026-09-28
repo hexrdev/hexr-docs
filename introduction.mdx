@@ -147,7 +147,7 @@ Write agents with any Python framework. Hexr detects and adapts automatically.
 |---|---|---|
 | Multi-cloud finserv (hedge funds, banks) | FFIEC, SEC, FINRA — per-process attestation | Per-process SPIFFE + signed evidence rows in customer Postgres |
 | Regulated healthcare | HIPAA §164.312 — PHI access audit trail | BYO Vault PKI (Mode B), evidence stays in customer VPC, zero Microsoft/AWS/GCP cloud involvement |
-| Defense / govtech | FedRAMP IL5, ITAR, CMMC L3 — no SaaS vendors | Air-gapped Helm chart, no internet egress, customer-owned trust root |
+| Defense / govtech | FedRAMP IL5, ITAR, CMMC L3 — no SaaS vendors | Customer-owned trust root, evidence never leaves the cluster. Full air-gap is roadmap. |
 | AmLaw 100 + Big-4 audit firms | Client data cannot leave jurisdiction | Cross-cluster A2A mTLS, federated SPIFFE, full delegation chain in evidence |
 
 ---

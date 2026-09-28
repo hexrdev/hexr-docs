@@ -11,7 +11,7 @@ description: "Hexr's architecture supports SOC 2, GDPR, HIPAA, and FedRAMP compl
 | **SOC 2 Type II** | Architecture ready | Encryption at rest, audit logging, access controls |
 | **GDPR** | Architecture ready | Data isolation per tenant, encryption, right to deletion |
 | **HIPAA** | Architecture ready | PHI isolation, audit trails, encryption |
-| **FedRAMP** | Self-hosted air-gapped | Air-gapped deployment, FIPS-compatible cryptography |
+| **FedRAMP** | Roadmap — air-gap not yet available | Intended: air-gapped deployment, FIPS-compatible cryptography |
 
 ---
 
@@ -50,9 +50,15 @@ description: "Hexr's architecture supports SOC 2, GDPR, HIPAA, and FedRAMP compl
 
 ## Air-Gapped Deployment
 
-For FedRAMP and classified environments, Hexr supports fully air-gapped deployment:
+**Roadmap, not available today.** The current focus is the hybrid model: the
+data plane in your cluster, a thin control plane for licensing.
 
-- All container images pre-loaded into a private registry
-- No external network dependencies at runtime
-- SPIRE operates with private trust domain
-- See [Air-Gapped Deployment](/self-hosted/air-gapped) for setup
+The chart already accepts `cloud.enabled=false` with an offline licence, so a
+data plane can run without reaching `api.hexr.cloud`. What is missing is
+in-cluster delivery of framework signature packs, which are fetched over HTTPS.
+An air-gapped cluster would be frozen on whichever packs shipped in its SDK
+wheel.
+
+Do not plan a FedRAMP or classified deployment around this yet. See
+[Air-Gapped Deployment](/self-hosted/air-gapped) for the intended design, and
+talk to us first.
