@@ -62,8 +62,21 @@ The wheel is downloaded with `pip download --platform manylinux2014_x86_64`, so
 it is x86_64 and nothing else.
 
 <Warning>
-On Apple Silicon with SDK **older than 0.5.32**, `docker build` defaults to
-arm64 and fails:
+**Use `buildx --platform`, not plain `docker build`, when building by hand on a
+Mac.** `docker build` on Apple Silicon records the *builder's* platform in the
+pushed manifest even when the image contents are amd64, because
+`FROM --platform=linux/amd64` sets the contents and not the index. The image
+then passes `docker image inspect` as `arch=amd64` and the cluster still refuses
+it:
+
+```
+failed to pull and unpack image: no match for platform in manifest: not found
+```
+
+`hexr push` already uses buildx and is not affected. This only bites the manual
+path.
+
+On SDK **older than 0.5.32**, `docker build` also fails outright:
 
 ```
 ERROR: hexr_sdk-0.5.31-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -129,8 +142,7 @@ and note the build context is `.hexr`, not `.`:
 
 ```bash
 IMAGE=$(grep -m1 'image:' .hexr/manifests/agent-pod.yaml | awk '{print $2}')
-docker build -f .hexr/Dockerfile -t "$IMAGE" .hexr
-docker push "$IMAGE"
+docker buildx build --platform linux/amd64 -f .hexr/Dockerfile -t "$IMAGE" --push .hexr
 ```
 
 Check what you built:
